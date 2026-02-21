@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL提出メッセージ生成</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --bg-input: rgba(245, 243, 240, 0.8);
+            --border-color: rgba(200, 50, 50, 0.15);
+            --border-hover: rgba(200, 50, 50, 0.4);
+            --text-primary: #2d2d2d;
+            --text-secondary: #6b6b6b;
+            --text-label: #444444;
+            --accent-primary: #c83232;
+            --accent-secondary: #d44444;
+            --accent-glow: rgba(200, 50, 50, 0.2);
+            --success: #2e9e6a;
+            --success-glow: rgba(46, 158, 106, 0.3);
+            --danger: #c83232;
+            --danger-hover: #a52828;
+            --gradient-1: linear-gradient(135deg, #c83232, #d44444, #e05555);
+            --gradient-2: linear-gradient(135deg, #faf9f7, #f0ebe5);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
+            --shadow-glow: 0 4px 16px rgba(200, 50, 50, 0.2);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Brush stroke decorations */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            top: -30px;
+            right: -30px;
+            width: 200px;
+            height: 200px;
+            background:
+                linear-gradient(135deg, rgba(200, 50, 50, 0.5) 0%, rgba(200, 50, 50, 0.1) 40%, transparent 70%);
+            clip-path: polygon(100% 0%, 60% 0%, 100% 40%);
+        }
+
+        body::after {
+            bottom: 0;
+            left: 0;
+            width: 300px;
+            height: 180px;
+            background:
+                repeating-linear-gradient(-30deg,
+                    rgba(200, 50, 50, 0.08),
+                    rgba(200, 50, 50, 0.08) 3px,
+                    transparent 3px,
+                    transparent 12px),
+                linear-gradient(160deg, rgba(200, 50, 50, 0.12) 0%, transparent 60%);
+            clip-path: polygon(0% 40%, 0% 100%, 70% 100%, 50% 70%, 30% 55%);
+        }
+
+        .bg-decor-tr {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 160px;
+            height: 160px;
+            background: linear-gradient(225deg, rgba(200, 50, 50, 0.35) 0%, transparent 60%);
+            clip-path: polygon(100% 0%, 50% 0%, 100% 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-decor-bl {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 250px;
+            height: 150px;
+            background:
+                repeating-linear-gradient(25deg,
+                    rgba(200, 50, 50, 0.06),
+                    rgba(200, 50, 50, 0.06) 2px,
+                    transparent 2px,
+                    transparent 10px);
+            clip-path: polygon(0% 30%, 0% 100%, 60% 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-decor-br {
+            position: fixed;
+            bottom: -10px;
+            right: -10px;
+            width: 200px;
+            height: 120px;
+            background:
+                repeating-linear-gradient(-25deg,
+                    rgba(200, 50, 50, 0.07),
+                    rgba(200, 50, 50, 0.07) 2px,
+                    transparent 2px,
+                    transparent 8px);
+            clip-path: polygon(40% 100%, 100% 100%, 100% 30%, 70% 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Mac titlebar drag region */
+        .titlebar {
+            -webkit-app-region: drag;
+            height: 38px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 48px 20px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-card);
+            transition: border-color var(--transition);
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--gradient-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-label);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="url"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="url"]:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* YouTube entries */
+        .youtube-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .youtube-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            animation: slideIn 0.3s ease;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(200, 50, 50, 0.08);
+            margin-bottom: 12px;
+        }
+
+        .youtube-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .youtube-entry-row {
+            display: grid;
+            grid-template-columns: 1fr 44px;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .note-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: var(--accent-primary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all var(--transition);
+            opacity: 0.7;
+        }
+
+        .note-toggle:hover {
+            opacity: 1;
+            background: rgba(200, 50, 50, 0.06);
+        }
+
+        .note-area {
+            display: none;
+        }
+
+        .note-area.visible {
+            display: block;
+        }
+
+        .note-area input {
+            font-size: 0.8rem !important;
+            padding: 6px 10px !important;
+            height: 32px !important;
+            width: 25% !important;
+            min-width: 150px;
+        }
+
+        .project-entry {
+            display: grid;
+            grid-template-columns: 1fr 44px;
+            gap: 10px;
+            align-items: end;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .youtube-entry label {
+            font-size: 0.78rem;
+        }
+
+        .btn-remove {
+            width: 44px;
+            height: 44px;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--danger);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all var(--transition);
+        }
+
+        .btn-remove:hover {
+            background: rgba(248, 113, 113, 0.2);
+            border-color: var(--danger);
+            transform: scale(1.05);
+        }
+
+        .btn-add {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: 1px dashed var(--border-hover);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--accent-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all var(--transition);
+            margin-top: 4px;
+        }
+
+        .btn-add:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Platform select */
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+
+        select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* Template editor */
+        textarea {
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            font-size: 0.88rem;
+            line-height: 1.8;
+            transition: all var(--transition);
+            outline: none;
+            resize: vertical;
+            min-height: 180px;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xs);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all var(--transition);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .template-hint {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-radius: var(--radius-xs);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .template-hint code {
+            background: rgba(99, 102, 241, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.76rem;
+            color: var(--accent-secondary);
+        }
+
+        .template-hint-toggle {
+            background: none;
+            border: none;
+            color: var(--accent-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            padding: 0;
+            transition: color var(--transition);
+        }
+
+        .template-hint-toggle:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Preview area */
+        .preview-area {
+            position: relative;
+        }
+
+        .preview-content {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            min-height: 200px;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        .btn-copy {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--gradient-1);
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-copy::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-copy:hover::before {
+            left: 100%;
+        }
+
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+
+        .btn-copy.copied {
+            background: linear-gradient(135deg, var(--success), #10b981);
+        }
+
+        .btn-clear {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border: 1px dashed rgba(200, 50, 50, 0.3);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--accent-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 10px;
+        }
+
+        .btn-clear:hover {
+            background: rgba(200, 50, 50, 0.06);
+            border-color: rgba(200, 50, 50, 0.5);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 14px 24px;
+            background: rgba(46, 158, 106, 0.12);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(46, 158, 106, 0.3);
+            border-radius: var(--radius-sm);
+            color: var(--success);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Collapsible section */
+        .card-title.collapsible {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .card-title.collapsible:hover {
+            color: var(--accent-secondary);
+        }
+
+        .card-title .toggle-arrow {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .card-title.collapsible:hover .toggle-arrow {
+            color: var(--accent-secondary);
+        }
+
+        .card-title .toggle-arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        .collapsible-content.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            .card {
+                padding: 24px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            .youtube-entry-row,
+            .project-entry {
+                grid-template-columns: 1fr 40px;
+                gap: 8px;
+            }
+
+            .youtube-entry input,
+            .youtube-entry select {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="titlebar"></div>
+    <div class="bg-decor-tr"></div>
+    <div class="bg-decor-bl"></div>
+    <div class="bg-decor-br"></div>
+    <div class="container">
+        <header class="header">
+            <h1>📋 URL提出メッセージ生成</h1>
+            <p>URLと情報を入力して、提出メッセージを自動生成します</p>
+        </header>
+
+        <!-- 基本情報 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">📝</div>
+                基本情報
+            </div>
+            <div class="form-group">
+                <label for="projectName">プロジェクト名</label>
+                <input type="text" id="projectName" placeholder="例: 担当している動画の名前" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+                <label for="workType">作業種別</label>
+                <select id="workType" onchange="onWorkTypeChange()">
+                    <option value="修正">修正</option>
+                    <option value="制作">制作</option>
+                    <option value="custom">自分で入力</option>
+                </select>
+                <input type="text" id="workTypeCustom" placeholder="作業内容を入力" style="display:none; margin-top:8px;"
+                    oninput="updatePreview()">
+            </div>
+        </div>
+
+        <!-- YouTube限定公開 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🎬</div>
+                YouTube限定公開
+            </div>
+            <div class="youtube-entries" id="youtubeEntries">
+                <!-- Dynamic entries will be added here -->
+            </div>
+            <button class="btn-add" onclick="addYoutubeEntry()">
+                ＋ 動画を追加
+            </button>
+        </div>
+
+        <!-- その他のURL -->
+        <div class="card">
+            <div class="card-title collapsible" onclick="toggleSection('otherUrls')">
+                <div class="icon">🔗</div>
+                その他のURL
+                <span class="toggle-arrow" id="otherUrlsArrow">▼</span>
+            </div>
+            <div class="collapsible-content" id="otherUrls">
+                <div class="form-group">
+                    <label for="mp4Url">MP4 URL</label>
+                    <input type="url" id="mp4Url" placeholder="https://..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label for="promanageUrl">プロマネ URL</label>
+                    <input type="url" id="promanageUrl" placeholder="https://..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label for="spreadsheetUrl">スプレッドシート URL</label>
+                    <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."
+                        oninput="updatePreview()">
+                </div>
+            </div>
+        </div>
+
+        <!-- テンプレート編集 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">✏️</div>
+                テンプレート編集
+            </div>
+            <div class="form-group">
+                <label for="templateEditor">メッセージテンプレート</label>
+                <textarea id="templateEditor" rows="12" oninput="updatePreview()"></textarea>
+            </div>
+            <div class="template-actions">
+                <button class="btn-secondary" onclick="resetTemplate()">🔄 デフォルトに戻す</button>
+                <button class="btn-secondary template-hint-toggle" onclick="toggleHint()">💡 変数ヘルプ</button>
+            </div>
+            <div class="template-hint" id="templateHint" style="display:none;">
+                以下の変数がテンプレート内で使用できます：<br>
+                <code>{プロジェクト名}</code> プロジェクト名<br>
+                <code>{作業種別}</code> 制作または修正<br>
+                <code>{YouTube一覧}</code> YouTube限定公開のURL一覧<br>
+                <code>{プロマネURL}</code> プロマネURL<br>
+                <code>{MP4URL}</code> MP4 URL<br>
+                <code>{スプレッドシートURL}</code> スプレッドシートURL
+            </div>
+        </div>
+
+        <!-- プレビュー -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">👁</div>
+                プレビュー
+            </div>
+            <div class="preview-area">
+                <div class="preview-content" id="preview"></div>
+                <button class="btn-copy" id="copyBtn" onclick="copyToClipboard()">
+                    📋 クリップボードにコピー
+                </button>
+                <button class="btn-clear" onclick="clearInputs()">
+                    🗑️ 入力をクリア
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        ✅ コピーしました！
+    </div>
+
+    <script>
+        // Initialize with default entries based on the example
+        let youtubeEntryId = 0;
+
+        // --- Project entry functions ---
+        let projectEntryId = 0;
+
+        function addProjectEntry(name = '') {
+            const container = document.getElementById('projectEntries');
+            const id = projectEntryId++;
+            const entry = document.createElement('div');
+            entry.className = 'project-entry';
+            entry.id = `proj-entry-${id}`;
+            entry.innerHTML = `
+        <div class="form-group">
+          <input type="text" placeholder="例: 担当している動画の名前" value="${name}" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <button class="btn-remove" onclick="removeProjectEntry(${id})">✕</button>
+        </div>
+      `;
+            container.appendChild(entry);
+            updatePreview();
+        }
+
+        function removeProjectEntry(id) {
+            const entry = document.getElementById(`proj-entry-${id}`);
+            if (entry) {
+                entry.style.animation = 'slideOut 0.25s ease forwards';
+                setTimeout(() => {
+                    entry.remove();
+                    updatePreview();
+                }, 250);
+            }
+        }
+
+        function getProjectNames() {
+            const container = document.getElementById('projectEntries');
+            const entries = container.querySelectorAll('.project-entry');
+            const names = [];
+            entries.forEach(entry => {
+                const input = entry.querySelector('input');
+                const val = input.value.trim();
+                if (val) names.push(val);
+            });
+            return names;
+        }
+
+        // --- YouTube entry functions ---
+        function addYoutubeEntry(url = '', note = '') {
+            const container = document.getElementById('youtubeEntries');
+            const id = youtubeEntryId++;
+            const entry = document.createElement('div');
+            entry.className = 'youtube-entry';
+            entry.id = `yt-entry-${id}`;
+            entry.innerHTML = `
+        <div class="note-area ${note ? 'visible' : ''}" id="note-${id}">
+          <input type="text" placeholder="詳細な情報を入力" value="${note}" oninput="updatePreview()">
+        </div>
+        <div class="youtube-entry-row">
+          <div class="form-group" style="margin-bottom:0">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" class="note-toggle" onclick="toggleNote(${id})" title="備考を追加">➕備考</button>
+            </div>
+            <input type="url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <button class="btn-remove" onclick="removeYoutubeEntry(${id})">✕</button>
+          </div>
+        </div>
+      `;
+            container.appendChild(entry);
+            updatePreview();
+        }
+
+        function toggleNote(id) {
+            const noteArea = document.getElementById(`note-${id}`);
+            noteArea.classList.toggle('visible');
+            if (noteArea.classList.contains('visible')) {
+                noteArea.querySelector('input').focus();
+            }
+        }
+
+        function removeYoutubeEntry(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry) {
+                entry.style.animation = 'slideOut 0.25s ease forwards';
+                setTimeout(() => {
+                    entry.remove();
+                    // Update labels for first entry
+                    refreshEntryLabels();
+                    updatePreview();
+                }, 250);
+            }
+        }
+
+        function refreshEntryLabels() {
+            // No label management needed for new layout
+        }
+
+        function getYoutubeEntries() {
+            const container = document.getElementById('youtubeEntries');
+            const entries = container.querySelectorAll('.youtube-entry');
+            const result = [];
+            entries.forEach(entry => {
+                const noteInput = entry.querySelector('.note-area input');
+                const urlInput = entry.querySelector('input[type="url"]');
+                const note = noteInput ? noteInput.value.trim() : '';
+                const url = urlInput ? urlInput.value.trim() : '';
+                if (url) result.push({ note, url });
+            });
+            return result;
+        }
+
+        const DEFAULT_TEMPLATE = `【ご提出】
+
+お世話になっております！
+
+「{プロジェクト名}」の{作業種別}が完了いたしましたのでご提出させていただきます！
+ご確認よろしくお願いいたします！
+{YouTube一覧}
+{MP4URL}
+{プロマネURL}
+{スプレッドシートURL}`;
+
+        function initTemplate() {
+            const saved = localStorage.getItem('urlSubmitTemplate');
+            const editor = document.getElementById('templateEditor');
+            editor.value = saved || DEFAULT_TEMPLATE;
+        }
+
+        function saveTemplate() {
+            const editor = document.getElementById('templateEditor');
+            localStorage.setItem('urlSubmitTemplate', editor.value);
+        }
+
+        function resetTemplate() {
+            const editor = document.getElementById('templateEditor');
+            editor.value = DEFAULT_TEMPLATE;
+            localStorage.removeItem('urlSubmitTemplate');
+            updatePreview();
+        }
+
+        function clearInputs() {
+            // プロジェクト名をクリア
+            document.getElementById('projectName').value = '';
+
+            // YouTube URLをクリア
+            const ytEntries = document.querySelectorAll('.youtube-entry input');
+            ytEntries.forEach(input => input.value = '');
+
+            // その他のURLをクリア
+            document.getElementById('promanageUrl').value = '';
+            document.getElementById('mp4Url').value = '';
+            document.getElementById('spreadsheetUrl').value = '';
+
+            updatePreview();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function onWorkTypeChange() {
+            const select = document.getElementById('workType');
+            const customInput = document.getElementById('workTypeCustom');
+            if (select.value === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+            }
+            updatePreview();
+        }
+
+        function toggleHint() {
+            const hint = document.getElementById('templateHint');
+            hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updatePreview() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const workTypeSelect = document.getElementById('workType');
+            const workTypeCustom = document.getElementById('workTypeCustom');
+            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+            const promanageUrl = document.getElementById('promanageUrl').value.trim();
+            const mp4Url = document.getElementById('mp4Url').value.trim();
+            const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
+            const youtubeUrls = getYoutubeEntries();
+
+            // Build project title part
+            let titlePart = projectName || '';
+
+            // Build YouTube section
+            let ytSection = '';
+            if (youtubeUrls.length > 0) {
+                ytSection = '▼YouTube限定公開\n';
+                youtubeUrls.forEach(entry => {
+                    if (entry.note) {
+                        ytSection += entry.note + '\n';
+                    }
+                    ytSection += entry.url + '\n';
+                });
+                ytSection = ytSection.trimEnd();
+            }
+
+            // Build other URL sections
+            let promanageSection = promanageUrl ? '▼プロマネ\n' + promanageUrl : '';
+            let mp4Section = mp4Url ? '▼MP4\n' + mp4Url : '';
+            let ssSection = spreadsheetUrl ? '▼スプレッドシート\n' + spreadsheetUrl : '';
+
+            // Apply template
+            const template = document.getElementById('templateEditor').value;
+            let message = template
+                .replace(/\{プロジェクト名\}/g, titlePart || '')
+                .replace(/\{作業種別\}/g, workType)
+                .replace(/\{YouTube一覧\}/g, ytSection)
+                .replace(/\{プロマネURL\}/g, promanageSection)
+                .replace(/\{MP4URL\}/g, mp4Section)
+                .replace(/\{スプレッドシートURL\}/g, ssSection);
+
+            // Clean up excessive blank lines (more than 2 consecutive)
+            message = message.replace(/\n{3,}/g, '\n\n');
+            message = message.trim();
+
+            document.getElementById('preview').textContent = message;
+
+            // Save template on change
+            saveTemplate();
+        }
+
+        async function copyToClipboard() {
+            const preview = document.getElementById('preview');
+            const text = preview.textContent;
+            const btn = document.getElementById('copyBtn');
+
+            try {
+                await navigator.clipboard.writeText(text);
+                btn.classList.add('copied');
+                btn.innerHTML = '✅ コピーしました！';
+
+                // Show toast
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '📋 クリップボードにコピー';
+                }, 2000);
+            } catch (err) {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                btn.classList.add('copied');
+                btn.innerHTML = '✅ コピーしました！';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '📋 クリップボードにコピー';
+                }, 2000);
+            }
+        }
+
+        // Add slide-out animation
+        const style = document.createElement('style');
+        style.textContent = `
+      @keyframes slideOut {
+        from { opacity: 1; transform: translateY(0); height: auto; }
+        to { opacity: 0; transform: translateY(-10px); height: 0; overflow: hidden; }
+      }
+    `;
+        document.head.appendChild(style);
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const arrow = document.getElementById(sectionId + 'Arrow');
+            content.classList.toggle('hidden');
+            arrow.classList.toggle('collapsed');
+        }
+
+        // Initialize template
+        initTemplate();
+
+
+        // Initialize YouTube entries
+        addYoutubeEntry('', '');
+
+        // Initial preview
+        updatePreview();
+    </script>
+</body>
+
+</html>

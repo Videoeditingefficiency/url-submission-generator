@@ -1,0 +1,29 @@
+{
+  "name": "url-submission-generator",
+  "version": "1.0.0",
+  "description": "URL提出メッセージ生成アプリ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "pack": "electron-builder --mac --dir"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.url-submission-generator",
+    "productName": "URL提出メッセージ生成",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg"
+    },
+    "files": [
+      "main.js",
+      "index.html"
+    ]
+  }
+}
