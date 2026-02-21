@@ -1098,12 +1098,84 @@
             arrow.classList.toggle('collapsed');
         }
 
+        // URLパラメータから自動入力
+        function loadFromUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.toString() === '') return;
+
+            // プロジェクト名
+            const project = params.get('project');
+            if (project) {
+                document.getElementById('projectName').value = decodeURIComponent(project);
+            }
+
+            // 作業種別
+            const worktype = params.get('worktype');
+            if (worktype) {
+                const select = document.getElementById('workType');
+                const matchOption = Array.from(select.options).find(o => o.value === worktype);
+                if (matchOption) {
+                    select.value = worktype;
+                } else {
+                    select.value = 'custom';
+                    document.getElementById('workTypeCustom').style.display = 'block';
+                    document.getElementById('workTypeCustom').value = decodeURIComponent(worktype);
+                }
+            }
+
+            // YouTube URL（youtube, youtube2, youtube3, ... に対応）
+            const youtubeUrls = [];
+            const youtubeNotes = [];
+            // まず youtube パラメータ
+            if (params.get('youtube')) {
+                youtubeUrls.push(decodeURIComponent(params.get('youtube')));
+                youtubeNotes.push(params.get('youtube_note') ? decodeURIComponent(params.get('youtube_note')) : '');
+            }
+            // youtube2, youtube3, ... を順番にチェック
+            for (let i = 2; i <= 20; i++) {
+                const url = params.get(`youtube${i}`);
+                if (url) {
+                    youtubeUrls.push(decodeURIComponent(url));
+                    const note = params.get(`youtube${i}_note`);
+                    youtubeNotes.push(note ? decodeURIComponent(note) : '');
+                }
+            }
+
+            // MP4 URL
+            const mp4 = params.get('mp4');
+            if (mp4) {
+                document.getElementById('mp4Url').value = decodeURIComponent(mp4);
+            }
+
+            // プロマネ URL
+            const promanage = params.get('promanage');
+            if (promanage) {
+                document.getElementById('promanageUrl').value = decodeURIComponent(promanage);
+            }
+
+            // スプレッドシート URL
+            const spreadsheet = params.get('spreadsheet');
+            if (spreadsheet) {
+                document.getElementById('spreadsheetUrl').value = decodeURIComponent(spreadsheet);
+            }
+
+            return { youtubeUrls, youtubeNotes };
+        }
+
         // Initialize template
         initTemplate();
 
+        // URLパラメータを読み取り
+        const urlParamData = loadFromUrlParams();
 
         // Initialize YouTube entries
-        addYoutubeEntry('', '');
+        if (urlParamData && urlParamData.youtubeUrls.length > 0) {
+            urlParamData.youtubeUrls.forEach((url, i) => {
+                addYoutubeEntry(url, urlParamData.youtubeNotes[i] || '');
+            });
+        } else {
+            addYoutubeEntry('', '');
+        }
 
         // Initial preview
         updatePreview();
