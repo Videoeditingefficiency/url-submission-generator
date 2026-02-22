@@ -911,17 +911,17 @@
             entry.id = `yt-entry-${id}`;
             entry.innerHTML = `
         <div class="youtube-entry-main">
-          <div class="form-group" style="${title ? 'margin-bottom:6px' : 'display:none'}">
-            <input type="text" class="yt-title" value="${title}" readonly tabindex="-1" style="font-size: 0.85rem; padding: 6px 12px; background: rgba(0,0,0,0.03); border: 1px solid transparent; color: var(--text-secondary); cursor: default; user-select: none;">
+          <div class="form-group" style="${title ? 'margin-bottom:2px' : 'display:none'}">
+            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;">${title}</div>
           </div>
           <div class="form-group" style="margin-bottom:0">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom: 4px;">
+              <button type="button" class="note-toggle" onclick="toggleNote(${id})" title="備考を追加">➕備考</button>
+            </div>
             <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
           </div>
           <div class="note-area ${note ? 'visible' : ''}" id="note-${id}">
-            <input type="text" class="yt-note" placeholder="詳細な情報を入力" value="${note}" oninput="updatePreview()" style="width:100% !important;">
-          </div>
-          <div>
-            <button type="button" class="note-toggle" onclick="toggleNote(${id})" title="備考を追加">➕備考</button>
+            <input type="text" class="yt-note" placeholder="詳細な情報を入力" value="${note}" oninput="updatePreview()" style="width:100% !important; margin-top: 6px;">
           </div>
         </div>
         <div class="youtube-entry-actions">
@@ -980,10 +980,10 @@
             const entries = container.querySelectorAll('.youtube-entry');
             const result = [];
             entries.forEach(entry => {
-                const titleInput = entry.querySelector('.yt-title');
+                const titleDiv = entry.querySelector('.yt-title');
                 const urlInput = entry.querySelector('.yt-url');
                 const noteInput = entry.querySelector('.yt-note');
-                const title = titleInput ? titleInput.value.trim() : '';
+                const title = titleDiv ? titleDiv.textContent.trim() : '';
                 const url = urlInput ? urlInput.value.trim() : '';
                 const note = noteInput ? noteInput.value.trim() : '';
                 if (url || title) result.push({ title, url, note });
@@ -1082,7 +1082,12 @@
                     if (entry.note) {
                         ytSection += entry.note + '\n';
                     }
-                    ytSection += (entry.url || 'URL未設定') + '\n\n';
+                    ytSection += (entry.url || 'URL未設定');
+
+                    // Add double newline unless it's the last element
+                    if (entry !== youtubeUrls[youtubeUrls.length - 1]) {
+                        ytSection += '\n\n';
+                    }
                 });
                 ytSection = ytSection.trimEnd();
             }
