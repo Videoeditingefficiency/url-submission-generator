@@ -911,8 +911,8 @@
             entry.id = `yt-entry-${id}`;
             entry.innerHTML = `
         <div class="youtube-entry-main">
-          <div class="form-group" style="margin-bottom:0">
-            <input type="text" class="yt-title" placeholder="動画の名前 (例: 第1回)" value="${title}" oninput="updatePreview()">
+          <div class="form-group" style="margin-bottom:6px">
+            <input type="text" class="yt-title" placeholder="ファイル名やメモ (提出メッセージには含まれません)" value="${title}" style="font-size: 0.8rem; padding: 6px 12px; background: rgba(0,0,0,0.02); border: 1px dashed var(--border-color); color: var(--text-secondary);">
           </div>
           <div class="form-group" style="margin-bottom:0">
             <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
@@ -1076,9 +1076,6 @@
             if (youtubeUrls.length > 0) {
                 ytSection = '▼YouTube限定公開\n';
                 youtubeUrls.forEach(entry => {
-                    if (entry.title) {
-                        ytSection += `【${entry.title}】\n`;
-                    }
                     if (entry.note) {
                         ytSection += entry.note + '\n';
                     }
