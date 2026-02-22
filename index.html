@@ -1083,9 +1083,6 @@
             if (youtubeUrls.length > 0) {
                 ytSection = '▼YouTube限定公開\n';
                 youtubeUrls.forEach(entry => {
-                    if (entry.title) {
-                        ytSection += `【${entry.title}】\n`;
-                    }
                     ytSection += (entry.url || 'URL未設定');
 
                     // Add double newline unless it's the last element
