@@ -270,25 +270,57 @@
 
         .youtube-entry {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
+            align-items: flex-start;
+            gap: 12px;
             animation: slideIn 0.3s ease;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(200, 50, 50, 0.08);
+            padding: 16px;
+            background: #fff;
+            border: 1px solid rgba(200, 50, 50, 0.1);
+            border-radius: var(--radius-sm);
             margin-bottom: 12px;
         }
 
         .youtube-entry:last-child {
-            border-bottom: none;
             margin-bottom: 0;
-            padding-bottom: 0;
         }
 
-        .youtube-entry-row {
-            display: grid;
-            grid-template-columns: 1fr 44px;
+        .youtube-entry-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            align-items: end;
+        }
+
+        .youtube-entry-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .btn-icon-small {
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(200, 50, 50, 0.2);
+            border-radius: var(--radius-sm);
+            background: rgba(200, 50, 50, 0.05);
+            color: var(--accent-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: all var(--transition);
+        }
+
+        .btn-icon-small:hover {
+            background: rgba(200, 50, 50, 0.1);
+            border-color: rgba(200, 50, 50, 0.4);
+        }
+
+        .btn-remove.small {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
         }
 
         .note-toggle {
@@ -680,7 +712,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .youtube-entry-row,
             .project-entry {
                 grid-template-columns: 1fr 40px;
                 gap: 8px;
@@ -690,6 +721,15 @@
             .youtube-entry select {
                 padding: 10px 12px;
                 font-size: 0.85rem;
+            }
+
+            .youtube-entry {
+                flex-direction: column;
+            }
+
+            .youtube-entry-actions {
+                flex-direction: row;
+                justify-content: flex-end;
             }
         }
     </style>
@@ -863,30 +903,51 @@
         }
 
         // --- YouTube entry functions ---
-        function addYoutubeEntry(url = '', note = '') {
+        function addYoutubeEntry(url = '', note = '', title = '') {
             const container = document.getElementById('youtubeEntries');
             const id = youtubeEntryId++;
             const entry = document.createElement('div');
             entry.className = 'youtube-entry';
             entry.id = `yt-entry-${id}`;
             entry.innerHTML = `
-        <div class="note-area ${note ? 'visible' : ''}" id="note-${id}">
-          <input type="text" placeholder="詳細な情報を入力" value="${note}" oninput="updatePreview()">
+        <div class="youtube-entry-main">
+          <div class="form-group" style="margin-bottom:0">
+            <input type="text" class="yt-title" placeholder="動画の名前 (例: 第1回)" value="${title}" oninput="updatePreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
+          </div>
+          <div class="note-area ${note ? 'visible' : ''}" id="note-${id}">
+            <input type="text" class="yt-note" placeholder="詳細な情報を入力" value="${note}" oninput="updatePreview()" style="width:100% !important;">
+          </div>
+          <div>
+            <button type="button" class="note-toggle" onclick="toggleNote(${id})" title="備考を追加">➕備考</button>
+          </div>
         </div>
-        <div class="youtube-entry-row">
-          <div class="form-group" style="margin-bottom:0">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <button type="button" class="note-toggle" onclick="toggleNote(${id})" title="備考を追加">➕備考</button>
-            </div>
-            <input type="url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <button class="btn-remove" onclick="removeYoutubeEntry(${id})">✕</button>
-          </div>
+        <div class="youtube-entry-actions">
+          <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryUp(${id})" title="上に移動">▲</button>
+          <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryDown(${id})" title="下に移動">▼</button>
+          <button type="button" class="btn-remove small" onclick="removeYoutubeEntry(${id})" title="削除">✕</button>
         </div>
       `;
             container.appendChild(entry);
             updatePreview();
+        }
+
+        function moveYoutubeEntryUp(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry && entry.previousElementSibling) {
+                entry.parentNode.insertBefore(entry, entry.previousElementSibling);
+                updatePreview();
+            }
+        }
+
+        function moveYoutubeEntryDown(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry && entry.nextElementSibling) {
+                entry.parentNode.insertBefore(entry.nextElementSibling, entry);
+                updatePreview();
+            }
         }
 
         function toggleNote(id) {
@@ -919,11 +980,13 @@
             const entries = container.querySelectorAll('.youtube-entry');
             const result = [];
             entries.forEach(entry => {
-                const noteInput = entry.querySelector('.note-area input');
-                const urlInput = entry.querySelector('input[type="url"]');
-                const note = noteInput ? noteInput.value.trim() : '';
+                const titleInput = entry.querySelector('.yt-title');
+                const urlInput = entry.querySelector('.yt-url');
+                const noteInput = entry.querySelector('.yt-note');
+                const title = titleInput ? titleInput.value.trim() : '';
                 const url = urlInput ? urlInput.value.trim() : '';
-                if (url) result.push({ note, url });
+                const note = noteInput ? noteInput.value.trim() : '';
+                if (url || title) result.push({ title, url, note });
             });
             return result;
         }
@@ -962,8 +1025,12 @@
             document.getElementById('projectName').value = '';
 
             // YouTube URLをクリア
-            const ytEntries = document.querySelectorAll('.youtube-entry input');
-            ytEntries.forEach(input => input.value = '');
+            const ytTitles = document.querySelectorAll('.youtube-entry .yt-title');
+            const ytUrls = document.querySelectorAll('.youtube-entry .yt-url');
+            const ytNotes = document.querySelectorAll('.youtube-entry .yt-note');
+            ytTitles.forEach(input => input.value = '');
+            ytUrls.forEach(input => input.value = '');
+            ytNotes.forEach(input => input.value = '');
 
             // その他のURLをクリア
             document.getElementById('promanageUrl').value = '';
@@ -1009,10 +1076,13 @@
             if (youtubeUrls.length > 0) {
                 ytSection = '▼YouTube限定公開\n';
                 youtubeUrls.forEach(entry => {
+                    if (entry.title) {
+                        ytSection += `【${entry.title}】\n`;
+                    }
                     if (entry.note) {
                         ytSection += entry.note + '\n';
                     }
-                    ytSection += entry.url + '\n';
+                    ytSection += (entry.url || 'URL未設定') + '\n\n';
                 });
                 ytSection = ytSection.trimEnd();
             }
@@ -1126,10 +1196,12 @@
             // YouTube URL（youtube, youtube2, youtube3, ... に対応）
             const youtubeUrls = [];
             const youtubeNotes = [];
+            const youtubeTitles = [];
             // まず youtube パラメータ
             if (params.get('youtube')) {
                 youtubeUrls.push(decodeURIComponent(params.get('youtube')));
                 youtubeNotes.push(params.get('youtube_note') ? decodeURIComponent(params.get('youtube_note')) : '');
+                youtubeTitles.push(params.get('youtube_title') ? decodeURIComponent(params.get('youtube_title')) : '');
             }
             // youtube2, youtube3, ... を順番にチェック
             for (let i = 2; i <= 20; i++) {
@@ -1138,6 +1210,8 @@
                     youtubeUrls.push(decodeURIComponent(url));
                     const note = params.get(`youtube${i}_note`);
                     youtubeNotes.push(note ? decodeURIComponent(note) : '');
+                    const title = params.get(`youtube${i}_title`);
+                    youtubeTitles.push(title ? decodeURIComponent(title) : '');
                 }
             }
 
@@ -1159,7 +1233,7 @@
                 document.getElementById('spreadsheetUrl').value = decodeURIComponent(spreadsheet);
             }
 
-            return { youtubeUrls, youtubeNotes };
+            return { youtubeUrls, youtubeNotes, youtubeTitles };
         }
 
         // Initialize template
@@ -1171,10 +1245,10 @@
         // Initialize YouTube entries
         if (urlParamData && urlParamData.youtubeUrls.length > 0) {
             urlParamData.youtubeUrls.forEach((url, i) => {
-                addYoutubeEntry(url, urlParamData.youtubeNotes[i] || '');
+                addYoutubeEntry(url, urlParamData.youtubeNotes[i] || '', urlParamData.youtubeTitles[i] || '');
             });
         } else {
-            addYoutubeEntry('', '');
+            addYoutubeEntry('', '', '');
         }
 
         // Initial preview
