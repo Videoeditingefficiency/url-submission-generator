@@ -833,9 +833,16 @@
 
         <!-- プレビュー -->
         <div class="card">
-            <div class="card-title">
-                <div class="icon">👁</div>
-                プレビュー
+            <div class="card-title" style="justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="icon">👁</div>
+                    プレビュー
+                </div>
+                <label
+                    style="font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-secondary);">
+                    <input type="checkbox" id="spaceToggle" checked onchange="saveTemplate(); updatePreview();">
+                    URLの間に空白行を空ける
+                </label>
             </div>
             <div class="preview-area">
                 <div class="preview-content" id="preview"></div>
@@ -1016,11 +1023,21 @@
             const saved = localStorage.getItem('urlSubmitTemplate');
             const editor = document.getElementById('templateEditor');
             editor.value = saved || DEFAULT_TEMPLATE;
+
+            const savedSpaceToggle = localStorage.getItem('urlSubmitSpaceToggle');
+            if (savedSpaceToggle !== null) {
+                document.getElementById('spaceToggle').checked = savedSpaceToggle === 'true';
+            }
         }
 
         function saveTemplate() {
             const editor = document.getElementById('templateEditor');
             localStorage.setItem('urlSubmitTemplate', editor.value);
+
+            const spaceToggle = document.getElementById('spaceToggle');
+            if (spaceToggle) {
+                localStorage.setItem('urlSubmitSpaceToggle', spaceToggle.checked);
+            }
         }
 
         function resetTemplate() {
@@ -1087,7 +1104,8 @@
 
                     // Add double newline unless it's the last element
                     if (entry !== youtubeUrls[youtubeUrls.length - 1]) {
-                        ytSection += '\n\n';
+                        const addSpace = document.getElementById('spaceToggle') ? document.getElementById('spaceToggle').checked : true;
+                        ytSection += addSpace ? '\n\n' : '\n';
                     }
                 });
                 ytSection = ytSection.trimEnd();
