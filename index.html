@@ -911,8 +911,8 @@
             entry.id = `yt-entry-${id}`;
             entry.innerHTML = `
         <div class="youtube-entry-main">
-          <div class="form-group yt-title-container" style="${title ? 'margin-bottom:2px' : 'display:none'}">
-            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;">${title}</div>
+          <div class="form-group yt-title-container" data-raw-title="${title}" style="display:none; margin-bottom:2px">
+            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;"></div>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
@@ -956,6 +956,36 @@
             }
         }
 
+
+        function updateYouTubeTitles() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const entries = document.querySelectorAll('.youtube-entry');
+
+            let generatedCount = 0;
+            const needsGeneration = Array.from(entries).filter(entry => {
+                const container = entry.querySelector('.yt-title-container');
+                return !container.dataset.rawTitle;
+            });
+
+            entries.forEach((entry) => {
+                const titleContainer = entry.querySelector('.yt-title-container');
+                const titleDiv = entry.querySelector('.yt-title');
+                const rawTitle = titleContainer.dataset.rawTitle;
+
+                if (rawTitle) {
+                    titleDiv.textContent = rawTitle;
+                    titleContainer.style.display = 'block';
+                } else if (projectName) {
+                    generatedCount++;
+                    const titleText = needsGeneration.length > 1 ? `${projectName} - ${generatedCount}` : projectName;
+                    titleDiv.textContent = titleText;
+                    titleContainer.style.display = 'block';
+                } else {
+                    titleDiv.textContent = '';
+                    titleContainer.style.display = 'none';
+                }
+            });
+        }
 
         function getYoutubeEntries() {
             const container = document.getElementById('youtubeEntries');
@@ -1035,6 +1065,7 @@
         }
 
         function updatePreview() {
+            updateYouTubeTitles();
             const projectName = document.getElementById('projectName').value.trim();
             const workTypeSelect = document.getElementById('workType');
             const workTypeCustom = document.getElementById('workTypeCustom');
