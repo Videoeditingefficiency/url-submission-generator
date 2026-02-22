@@ -914,8 +914,8 @@
           <div class="form-group" style="margin-bottom:0">
             <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
           </div>
-          <div class="form-group" style="${title ? 'margin-top:6px; margin-bottom:0;' : 'display:none'}">
-            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;">${title}</div>
+          <div class="form-group yt-title-container" style="margin-top:6px; margin-bottom:0; display:none;">
+            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;"></div>
           </div>
         </div>
         <div class="youtube-entry-actions">
@@ -932,6 +932,7 @@
             const entry = document.getElementById(`yt-entry-${id}`);
             if (entry && entry.previousElementSibling) {
                 entry.parentNode.insertBefore(entry, entry.previousElementSibling);
+                updateYouTubeTitles();
                 updatePreview();
             }
         }
@@ -940,6 +941,7 @@
             const entry = document.getElementById(`yt-entry-${id}`);
             if (entry && entry.nextElementSibling) {
                 entry.parentNode.insertBefore(entry.nextElementSibling, entry);
+                updateYouTubeTitles();
                 updatePreview();
             }
         }
@@ -951,15 +953,29 @@
                 entry.style.animation = 'slideOut 0.25s ease forwards';
                 setTimeout(() => {
                     entry.remove();
-                    // Update labels for first entry
-                    refreshEntryLabels();
+                    updateYouTubeTitles();
                     updatePreview();
                 }, 250);
             }
         }
 
-        function refreshEntryLabels() {
-            // No label management needed for new layout
+        function updateYouTubeTitles() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const entries = document.querySelectorAll('.youtube-entry');
+
+            entries.forEach((entry, index) => {
+                const titleContainer = entry.querySelector('.yt-title-container');
+                const titleDiv = entry.querySelector('.yt-title');
+
+                if (projectName) {
+                    const titleText = entries.length > 1 ? `${projectName} - ${index + 1}` : projectName;
+                    titleDiv.textContent = titleText;
+                    titleContainer.style.display = 'block';
+                } else {
+                    titleDiv.textContent = '';
+                    titleContainer.style.display = 'none';
+                }
+            });
         }
 
         function getYoutubeEntries() {
@@ -1040,6 +1056,7 @@
         }
 
         function updatePreview() {
+            updateYouTubeTitles();
             const projectName = document.getElementById('projectName').value.trim();
             const workTypeSelect = document.getElementById('workType');
             const workTypeCustom = document.getElementById('workTypeCustom');
@@ -1160,6 +1177,12 @@
             const project = params.get('project');
             if (project) {
                 document.getElementById('projectName').value = decodeURIComponent(project);
+            }
+
+            // youtube_title（過去の名称引継用。もしあればプロジェクト名にセットする）
+            const ytTitle = params.get('youtube_title');
+            if (!project && ytTitle) {
+                document.getElementById('projectName').value = decodeURIComponent(ytTitle);
             }
 
             // 作業種別
