@@ -317,6 +317,33 @@
             border-color: rgba(200, 50, 50, 0.4);
         }
 
+        .btn-view-video {
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(46, 158, 106, 0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(46, 158, 106, 0.08);
+            color: #2e9e6a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all var(--transition);
+        }
+
+        .btn-view-video:hover {
+            background: rgba(46, 158, 106, 0.18);
+            border-color: rgba(46, 158, 106, 0.5);
+            transform: scale(1.05);
+        }
+
+        .btn-view-video.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .btn-remove.small {
             width: 36px;
             height: 36px;
@@ -922,10 +949,11 @@
             <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;"></div>
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview()">
+            <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview(); updateViewButton(${id})">
           </div>
         </div>
         <div class="youtube-entry-actions">
+          <button type="button" class="btn-view-video disabled" id="btn-view-${id}" onclick="openVideoUrl(${id})" title="動画を確認">▶</button>
           <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryUp(${id})" title="上に移動">▲</button>
           <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryDown(${id})" title="下に移動">▼</button>
           <button type="button" class="btn-remove small" onclick="removeYoutubeEntry(${id})" title="削除">✕</button>
@@ -933,6 +961,8 @@
       `;
             container.appendChild(entry);
             updatePreview();
+            // URLが初期値として渡された場合、ボタンの状態を更新
+            if (url) updateViewButton(id);
         }
 
         function moveYoutubeEntryUp(id) {
@@ -961,6 +991,37 @@
                     updatePreview();
                 }, 250);
             }
+        }
+
+        function openVideoUrl(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (!entry) return;
+            const urlInput = entry.querySelector('.yt-url');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function updateViewButton(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (!entry) return;
+            const urlInput = entry.querySelector('.yt-url');
+            const btn = document.getElementById(`btn-view-${id}`);
+            if (!btn) return;
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (url) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        }
+
+        function updateAllViewButtons() {
+            document.querySelectorAll('.youtube-entry').forEach(entry => {
+                const id = entry.id.replace('yt-entry-', '');
+                updateViewButton(id);
+            });
         }
 
 
