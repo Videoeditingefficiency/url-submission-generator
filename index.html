@@ -338,6 +338,16 @@
             transform: scale(1.05);
         }
 
+        .url-with-button {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .url-with-button input {
+            flex: 1;
+        }
+
         .btn-view-video.disabled {
             opacity: 0.35;
             cursor: not-allowed;
@@ -819,16 +829,30 @@
             <div class="collapsible-content" id="otherUrls">
                 <div class="form-group">
                     <label for="mp4Url">MP4 URL</label>
-                    <input type="url" id="mp4Url" placeholder="https://..." oninput="updatePreview()">
+                    <div class="url-with-button">
+                        <input type="url" id="mp4Url" placeholder="https://..."
+                            oninput="updatePreview(); updateOtherViewButton('mp4Url')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-mp4Url"
+                            onclick="openOtherUrl('mp4Url')" title="URLを確認">▶</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="promanageUrl">プロマネ URL</label>
-                    <input type="url" id="promanageUrl" placeholder="https://..." oninput="updatePreview()">
+                    <div class="url-with-button">
+                        <input type="url" id="promanageUrl" placeholder="https://..."
+                            oninput="updatePreview(); updateOtherViewButton('promanageUrl')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-promanageUrl"
+                            onclick="openOtherUrl('promanageUrl')" title="URLを確認">▶</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="spreadsheetUrl">スプレッドシート URL</label>
-                    <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."
-                        oninput="updatePreview()">
+                    <div class="url-with-button">
+                        <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."
+                            oninput="updatePreview(); updateOtherViewButton('spreadsheetUrl')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-spreadsheetUrl"
+                            onclick="openOtherUrl('spreadsheetUrl')" title="URLを確認">▶</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1024,6 +1048,26 @@
             });
         }
 
+        // --- その他URL確認ボタン ---
+        function openOtherUrl(inputId) {
+            const input = document.getElementById(inputId);
+            const url = input ? input.value.trim() : '';
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function updateOtherViewButton(inputId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(`btn-view-${inputId}`);
+            if (!input || !btn) return;
+            const url = input.value.trim();
+            if (url) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        }
 
         function updateYouTubeTitles() {
             const projectName = document.getElementById('projectName').value.trim();
@@ -1120,6 +1164,11 @@
             document.getElementById('promanageUrl').value = '';
             document.getElementById('mp4Url').value = '';
             document.getElementById('spreadsheetUrl').value = '';
+
+            // その他URL確認ボタンを無効化
+            updateOtherViewButton('mp4Url');
+            updateOtherViewButton('promanageUrl');
+            updateOtherViewButton('spreadsheetUrl');
 
             updatePreview();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1304,18 +1353,21 @@
             const mp4 = params.get('mp4');
             if (mp4) {
                 document.getElementById('mp4Url').value = decodeURIComponent(mp4);
+                updateOtherViewButton('mp4Url');
             }
 
             // プロマネ URL
             const promanage = params.get('promanage');
             if (promanage) {
                 document.getElementById('promanageUrl').value = decodeURIComponent(promanage);
+                updateOtherViewButton('promanageUrl');
             }
 
             // スプレッドシート URL
             const spreadsheet = params.get('spreadsheet');
             if (spreadsheet) {
                 document.getElementById('spreadsheetUrl').value = decodeURIComponent(spreadsheet);
+                updateOtherViewButton('spreadsheetUrl');
             }
 
             return { youtubeUrls, youtubeNotes, youtubeTitles };
