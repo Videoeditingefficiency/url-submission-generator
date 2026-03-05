@@ -642,6 +642,88 @@
             background: linear-gradient(135deg, var(--success), #10b981);
         }
 
+        .btn-submit-sheet {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #2563eb, #3b82f6, #60a5fa);
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit-sheet::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-submit-sheet:hover::before {
+            left: 100%;
+        }
+
+        .btn-submit-sheet:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-submit-sheet:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit-sheet.sending {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-submit-sheet.sent-ok {
+            background: linear-gradient(135deg, var(--success), #10b981);
+        }
+
+        .btn-submit-sheet.sent-err {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+
+        .btn-submit-sheet .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .btn-submit-sheet.sending .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .gas-url-input {
+            font-size: 0.82rem !important;
+            padding: 8px 12px !important;
+        }
+
         .btn-clear {
             display: flex;
             align-items: center;
@@ -857,6 +939,24 @@
             </div>
         </div>
 
+        <!-- スプレッドシート連携設定 -->
+        <div class="card">
+            <div class="card-title collapsible" onclick="toggleSection('gasSettings')">
+                <div class="icon">📊</div>
+                スプレッドシート連携設定
+                <span class="toggle-arrow" id="gasSettingsArrow">▼</span>
+            </div>
+            <div class="collapsible-content" id="gasSettings">
+                <div class="form-group">
+                    <label for="gasUrl">GAS WebアプリURL</label>
+                    <input type="url" id="gasUrl" class="gas-url-input" placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
+                    <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5;">
+                        進捗管理スプレッドシートの「拡張機能」→「Apps Script」からデプロイしたWebアプリのURLを入力してください
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- テンプレート編集 -->
         <div class="card">
             <div class="card-title">
@@ -899,6 +999,10 @@
                 <div class="preview-content" id="preview"></div>
                 <button class="btn-copy" id="copyBtn" onclick="copyToClipboard()">
                     📋 クリップボードにコピー
+                </button>
+                <button class="btn-submit-sheet" id="submitSheetBtn" onclick="submitToSpreadsheet()">
+                    <span class="spinner"></span>
+                    <span id="submitSheetBtnText">📊 スプレッドシートに自動入力</span>
                 </button>
                 <button class="btn-clear" onclick="clearInputs()">
                     🗑️ 入力をクリア
@@ -1390,6 +1494,134 @@
 
         // Initial preview
         updatePreview();
+
+        // --- GAS連携設定 ---
+        function initGasUrl() {
+            const saved = localStorage.getItem('gasWebAppUrl');
+            if (saved) {
+                document.getElementById('gasUrl').value = saved;
+            }
+        }
+
+        function saveGasUrl() {
+            const url = document.getElementById('gasUrl').value.trim();
+            localStorage.setItem('gasWebAppUrl', url);
+        }
+
+        // --- スプレッドシートへの送信 ---
+        async function submitToSpreadsheet() {
+            const gasUrl = document.getElementById('gasUrl').value.trim();
+            if (!gasUrl) {
+                showToastMessage('⚠️ GAS WebアプリURLが設定されていません', 'warning');
+                // GAS設定セクションを開く
+                const content = document.getElementById('gasSettings');
+                const arrow = document.getElementById('gasSettingsArrow');
+                if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    arrow.classList.remove('collapsed');
+                }
+                document.getElementById('gasUrl').focus();
+                return;
+            }
+
+            const projectName = document.getElementById('projectName').value.trim();
+            if (!projectName) {
+                showToastMessage('⚠️ プロジェクト名を入力してください', 'warning');
+                document.getElementById('projectName').focus();
+                return;
+            }
+
+            // YouTube URLを収集
+            const youtubeEntries = getYoutubeEntries();
+            const youtubeUrls = youtubeEntries.map(e => e.url).filter(u => u);
+
+            // その他URL
+            const mp4Url = document.getElementById('mp4Url').value.trim();
+            const promanageUrl = document.getElementById('promanageUrl').value.trim();
+
+            // 作業種別
+            const workTypeSelect = document.getElementById('workType');
+            const workTypeCustom = document.getElementById('workTypeCustom');
+            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+
+            // ボタンを送信中状態に
+            const btn = document.getElementById('submitSheetBtn');
+            const btnText = document.getElementById('submitSheetBtnText');
+            btn.classList.add('sending');
+            btnText.textContent = '送信中...';
+
+            try {
+                const payload = {
+                    projectName,
+                    youtubeUrls,
+                    mp4Url,
+                    promanageUrl,
+                    workType
+                };
+
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.classList.remove('sending');
+                    btn.classList.add('sent-ok');
+                    const statusMsg = result.previousStatus !== result.newStatus
+                        ? ` (ステータス: ${result.previousStatus} → ${result.newStatus})`
+                        : '';
+                    btnText.textContent = `✅ ${result.message}${statusMsg}`;
+                    showToastMessage(`✅ ${result.message}`, 'success');
+
+                    setTimeout(() => {
+                        btn.classList.remove('sent-ok');
+                        btnText.textContent = '📊 スプレッドシートに自動入力';
+                    }, 4000);
+                } else {
+                    btn.classList.remove('sending');
+                    btn.classList.add('sent-err');
+                    btnText.textContent = `❌ ${result.error}`;
+                    showToastMessage(`❌ ${result.error}`, 'error');
+
+                    setTimeout(() => {
+                        btn.classList.remove('sent-err');
+                        btnText.textContent = '📊 スプレッドシートに自動入力';
+                    }, 4000);
+                }
+            } catch (error) {
+                btn.classList.remove('sending');
+                btn.classList.add('sent-err');
+                btnText.textContent = `❌ 通信エラー: ${error.message}`;
+                showToastMessage(`❌ 通信エラーが発生しました`, 'error');
+
+                setTimeout(() => {
+                    btn.classList.remove('sent-err');
+                    btnText.textContent = '📊 スプレッドシートに自動入力';
+                }, 4000);
+            }
+        }
+
+        function showToastMessage(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            if (type === 'warning' || type === 'error') {
+                toast.style.background = 'rgba(220, 38, 38, 0.12)';
+                toast.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+                toast.style.color = '#dc2626';
+            } else {
+                toast.style.background = 'rgba(46, 158, 106, 0.12)';
+                toast.style.borderColor = 'rgba(46, 158, 106, 0.3)';
+                toast.style.color = 'var(--success)';
+            }
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // GAS URL初期化
+        initGasUrl();
     </script>
 </body>
 
