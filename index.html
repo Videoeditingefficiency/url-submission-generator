@@ -705,7 +705,7 @@
             display: none;
             width: 18px;
             height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.6s linear infinite;
@@ -716,7 +716,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .gas-url-input {
@@ -851,6 +853,48 @@
                 justify-content: flex-end;
             }
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            width: 300px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            margin-bottom: 16px;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
     </style>
 </head>
 
@@ -865,6 +909,7 @@
             <p>URLと情報を入力して、提出メッセージを自動生成します</p>
         </header>
 
+
         <!-- 基本情報 -->
         <div class="card">
             <div class="card-title">
@@ -877,11 +922,13 @@
             </div>
             <div class="form-group">
                 <label for="workType">作業種別</label>
-                <select id="workType" onchange="onWorkTypeChange()">
-                    <option value="修正">修正</option>
-                    <option value="制作">制作</option>
-                    <option value="custom">自分で入力</option>
-                </select>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="workType" onchange="onWorkTypeChange()" style="flex: 1;">
+                    </select>
+                    <button class="btn-secondary" onclick="addWorkType()" title="新しく追加">➕</button>
+                    <button class="btn-secondary" onclick="renameWorkType()" title="名前を変更">✏️</button>
+                    <button class="btn-secondary" onclick="deleteWorkType()" title="削除">🗑️</button>
+                </div>
                 <input type="text" id="workTypeCustom" placeholder="作業内容を入力" style="display:none; margin-top:8px;"
                     oninput="updatePreview()">
             </div>
@@ -949,10 +996,31 @@
             <div class="collapsible-content" id="gasSettings">
                 <div class="form-group">
                     <label for="gasUrl">GAS WebアプリURL</label>
-                    <input type="url" id="gasUrl" class="gas-url-input" placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
+                    <input type="url" id="gasUrl" class="gas-url-input"
+                        placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
                     <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5;">
                         進捗管理スプレッドシートの「拡張機能」→「Apps Script」からデプロイしたWebアプリのURLを入力してください
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- メッセージから自動入力 -->
+        <div class="card auto-parse-section" style="border-color: rgba(16, 185, 129, 0.4);">
+            <div class="card-title" style="margin-bottom: 16px;">
+                <div class="icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">✨</div>
+                メッセージから自動入力
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;">
+                依頼メッセージや過去の提出メッセージを貼り付けると、情報を自動抽出します
+            </p>
+            <div class="form-group" style="margin-bottom: 0;">
+                <textarea id="autoParseArea" rows="4" placeholder="ここへメッセージをペーストしてください"
+                    onpaste="handleAutoParsePaste(event)"
+                    style="border-color: rgba(16, 185, 129, 0.3); font-size: 0.85rem; padding: 12px;"></textarea>
+                <div
+                    style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                    <span style="color: #10b981;">ℹ️</span> 貼り付けると即座に自動入力され、新しくテンプレートが作成されます。
                 </div>
             </div>
         </div>
@@ -964,8 +1032,18 @@
                 テンプレート編集
             </div>
             <div class="form-group">
+                <label for="templateSelect">メッセージテンプレート</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="templateSelect" onchange="onTemplateChange()" style="flex: 1;"></select>
+                    <button class="btn-secondary" onclick="addTemplate()" title="新しく追加">➕</button>
+                    <button class="btn-secondary" onclick="renameTemplate()" title="名前を変更">✏️</button>
+                    <button class="btn-secondary" onclick="deleteTemplate()" title="削除">🗑️</button>
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="templateEditor">メッセージテンプレート</label>
-                <textarea id="templateEditor" rows="12" oninput="updatePreview()"></textarea>
+                <textarea id="templateEditor" rows="12" oninput="onTemplateEditorInput()"
+                    onpaste="handleTemplatePaste(event)"></textarea>
             </div>
             <div class="template-actions">
                 <button class="btn-secondary" onclick="resetTemplate()">🔄 デフォルトに戻す</button>
@@ -1016,6 +1094,18 @@
         ✅ コピーしました！
     </div>
 
+    <!-- Custom Prompt Modal -->
+    <div id="customPromptModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="customPromptMessage" class="modal-title"></div>
+            <input type="text" id="customPromptInput" class="modal-input">
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeCustomPrompt(false)">キャンセル</button>
+                <button class="btn-view-video" style="opacity: 1; pointer-events: auto; padding: 8px 16px;"
+                    onclick="closeCustomPrompt(true)">OK</button>
+            </div>
+        </div>
+    </div>
     <script>
         // Initialize with default entries based on the example
         let youtubeEntryId = 0;
@@ -1217,31 +1307,249 @@
             return result;
         }
 
-        const DEFAULT_TEMPLATE = `【ご提出】
+        const TEMPLATES = {
+            template1: `【ご提出】
 
 お世話になっております！
 
 「{プロジェクト名}」の{作業種別}が完了いたしましたのでご提出させていただきます！
 ご確認よろしくお願いいたします！
+
+▼YouTube限定公開
 {YouTube一覧}
+
+▼MP4
 {MP4URL}
+
+▼プロマネ
 {プロマネURL}
-{スプレッドシートURL}`;
+
+▼スプレッドシート
+{スプレッドシートURL}`,
+            template2: `お疲れ様です。
+
+「{プロジェクト名}」の{作業種別}を提出いたします。
+ご確認のほど、よろしくお願いいたします。
+
+▼YouTube限定公開
+{YouTube一覧}
+
+▼MP4
+{MP4URL}
+
+▼プロマネ
+{プロマネURL}
+
+▼スプレッドシート
+{スプレッドシートURL}`,
+            template3: `お世話になっております。
+
+「{プロジェクト名}」につきまして、{作業種別}が完了いたしましたのでご提出申し上げます。
+お忙しいところ恐縮ですが、お手すきの際にご確認いただけますと幸いです。
+何卒よろしくお願い申し上げます。
+
+▼YouTube限定公開
+{YouTube一覧}
+
+▼MP4
+{MP4URL}
+
+▼プロマネ
+{プロマネURL}
+
+▼スプレッドシート
+{スプレッドシートURL}`
+        };
+
+        const DEFAULT_TEMPLATE = TEMPLATES.template1;
+
+        // 無限テンプレート管理データ
+        let customTemplates = {};
 
         function initTemplate() {
-            const saved = localStorage.getItem('urlSubmitTemplate');
-            const editor = document.getElementById('templateEditor');
-            editor.value = saved || DEFAULT_TEMPLATE;
+            // マイグレーション: 旧仕様のデータを新仕様に変換
+            const migrateData = localStorage.getItem('urlSubmitTemplatesData');
 
-            const savedSpaceToggle = localStorage.getItem('urlSubmitSpaceToggle');
-            if (savedSpaceToggle !== null) {
-                document.getElementById('spaceToggle').checked = savedSpaceToggle === 'true';
+            if (!migrateData) {
+                // 初回のみ既存ローカルデータを移行
+                customTemplates = {
+                    'template1': { name: 'テンプレート1（標準ベース）', content: localStorage.getItem('urlSubmitTemplate_template1') || TEMPLATES.template1 },
+                    'template2': { name: 'テンプレート2（シンプルベース）', content: localStorage.getItem('urlSubmitTemplate_template2') || TEMPLATES.template2 },
+                    'template3': { name: 'テンプレート3（丁寧ベース）', content: localStorage.getItem('urlSubmitTemplate_template3') || TEMPLATES.template3 }
+                };
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+            } else {
+                try {
+                    customTemplates = JSON.parse(migrateData);
+                } catch (e) {
+                    customTemplates = { 'template1': { name: '標準ベース', content: TEMPLATES.template1 } };
+                }
             }
+
+            renderTemplateSelect();
+
+            const savedType = localStorage.getItem('urlSubmitTemplateType') || Object.keys(customTemplates)[0];
+            const select = document.getElementById('templateSelect');
+            if (select) {
+                // 存在しないIDが選ばれていた場合のフォールバック
+                select.value = Object.keys(customTemplates)[0];
+            } else {
+                select.value = savedType;
+            }
+        }
+
+        loadCurrentTemplate();
+
+        const savedSpaceToggle = localStorage.getItem('urlSubmitSpaceToggle');
+        if (savedSpaceToggle !== null) {
+            document.getElementById('spaceToggle').checked = savedSpaceToggle === 'true';
+        }
+
+        // --- 作業種別 カスタマイズ機能 ---
+        let customWorkTypes = ['修正', '制作'];
+
+        function loadWorkTypes() {
+            const saved = localStorage.getItem('urlSubmitWorkTypesData');
+            if (saved) {
+                try {
+                    customWorkTypes = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to parse work types', e);
+                }
+            }
+            renderWorkTypeSelect();
+        }
+
+        function renderWorkTypeSelect() {
+            const select = document.getElementById('workType');
+            const currentValue = select.value;
+            select.innerHTML = '';
+            
+            customWorkTypes.forEach(type => {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = type;
+                select.appendChild(opt);
+            });
+            
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.textContent = '自分で入力';
+            select.appendChild(customOpt);
+            
+            // 選択状態を復元（存在しない場合は最初の要素を選択）
+            if (currentValue && (customWorkTypes.includes(currentValue) || currentValue === 'custom')) {
+                select.value = currentValue;
+            } else if (customWorkTypes.length > 0) {
+                select.value = customWorkTypes[0];
+            } else {
+                select.value = 'custom';
+            }
+            
+            onWorkTypeChange();
+        }
+
+        function addWorkType() {
+            showCustomPrompt('新しい作業種別の名前を入力:', '', function(name) {
+                if (!name || name.trim() === '') return;
+                name = name.trim();
+                if (customWorkTypes.includes(name) || name === 'custom') {
+                    alert('すでに存在する名前です。');
+                    return;
+                }
+                customWorkTypes.push(name);
+                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                renderWorkTypeSelect();
+                document.getElementById('workType').value = name;
+                onWorkTypeChange();
+                updatePreview();
+            });
+        }
+
+        function renameWorkType() {
+            const select = document.getElementById('workType');
+            const currentName = select.value;
+            if (currentName === 'custom') {
+                alert('「自分で入力」項目は変更できません。');
+                return;
+            }
+            showCustomPrompt('作業種別の名前を変更:', currentName, function(newName) {
+                if (!newName || newName.trim() === '') return;
+                newName = newName.trim();
+                if (newName === currentName) return;
+                if (customWorkTypes.includes(newName) || newName === 'custom') {
+                    alert('すでに存在する名前です。');
+                    return;
+                }
+                const index = customWorkTypes.indexOf(currentName);
+                if (index !== -1) {
+                    customWorkTypes[index] = newName;
+                    localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                    renderWorkTypeSelect();
+                    document.getElementById('workType').value = newName;
+                    onWorkTypeChange();
+                    updatePreview();
+                }
+            });
+        }
+
+        function deleteWorkType() {
+            const select = document.getElementById('workType');
+            const currentName = select.value;
+            if (currentName === 'custom') {
+                alert('「自分で入力」項目は削除できません。');
+                return;
+            }
+            if (customWorkTypes.length <= 1) {
+                alert('最低1つの作業種別が必要です。');
+                return;
+            }
+            if (confirm(`作業種別「${currentName}」を削除してもよろしいですか？`)) {
+                customWorkTypes = customWorkTypes.filter(t => t !== currentName);
+                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                renderWorkTypeSelect();
+                updatePreview();
+            }
+        }
+
+        loadWorkTypes();
+
+        function renderTemplateSelect() {
+            const select = document.getElementById('templateSelect');
+
+            select.innerHTML = '';
+            for (const [id, data] of Object.entries(customTemplates)) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = data.name;
+                select.appendChild(option);
+            }
+        }
+
+        function loadCurrentTemplate() {
+            const select = document.getElementById('templateSelect');
+            const editor = document.getElementById('templateEditor');
+            const currentType = select ? select.value : Object.keys(customTemplates)[0];
+
+            if (customTemplates[currentType]) {
+                editor.value = customTemplates[currentType].content;
+            }
+            updatePreview();
         }
 
         function saveTemplate() {
             const editor = document.getElementById('templateEditor');
-            localStorage.setItem('urlSubmitTemplate', editor.value);
+            const select = document.getElementById('templateSelect');
+
+            const currentType = select.value;
+
+            // 現在のテキスト内容を保存
+            if (customTemplates[currentType]) {
+                customTemplates[currentType].content = editor.value;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+            }
+
+            localStorage.setItem('urlSubmitTemplateType', currentType);
 
             const spaceToggle = document.getElementById('spaceToggle');
             if (spaceToggle) {
@@ -1249,10 +1557,377 @@
             }
         }
 
-        function resetTemplate() {
+        function onTemplateChange() {
+            loadCurrentTemplate();
+            saveTemplate();
+        }
+
+        function onTemplateEditorInput() {
+            saveTemplate();
+            updatePreview();
+        }
+
+        // Custom Prompt Logic
+        let customPromptCallback = null;
+
+        function showCustomPrompt(message, defaultValue, callback) {
+            document.getElementById('customPromptMessage').textContent = message;
+            const input = document.getElementById('customPromptInput');
+            input.value = defaultValue;
+            
+            document.getElementById('customPromptModal').style.display = 'flex';
+            input.focus();
+            input.select();
+            
+            customPromptCallback = callback;
+        }
+
+        function closeCustomPrompt(isOk) {
+            document.getElementById('customPromptModal').style.display = 'none';
+            if (customPromptCallback) {
+                const val = isOk ? document.getElementById('customPromptInput').value : null;
+                customPromptCallback(val);
+                customPromptCallback = null;
+            }
+        }
+
+        // --- テンプレート操作機能 ---
+        function addTemplate() {
+            showCustomPrompt('新しいテンプレート名を入力してください:', 'カスタムテンプレート', function(name) {
+                const newId = 'template_' + Date.now();
+                customTemplates[newId] = {
+                    name: name,
+                    content: DEFAULT_TEMPLATE
+                };
+
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+
+                const select = document.getElementById('templateSelect');
+                select.value = newId;
+                onTemplateChange();
+            });
+        }
+
+        function renameTemplate() {
+            const select = document.getElementById('templateSelect');
+            const currentId = select.value;
+            const currentName = customTemplates[currentId].name;
+
+            showCustomPrompt('テンプレートの名前を変更:', currentName, function(newName) {
+                customTemplates[currentId].name = newName;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+
+                // 選択状態を保持したまま再描画
+                renderTemplateSelect();
+                select.value = currentId;
+            });
+        }
+
+        function deleteTemplate() {
+            const select = document.getElementById('templateSelect');
+
+            if (Object.keys(customTemplates).length <= 1) {
+                alert('最低1つのテンプレートが必要です。');
+                return;
+            }
+
+            const currentId = select.value;
+            const currentName = customTemplates[currentId].name;
+
+            if (confirm(`テンプレート「${currentName}」を削除してもよろしいですか？`)) {
+                delete customTemplates[currentId];
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+
+                renderTemplateSelect();
+                select.value = Object.keys(customTemplates)[0];
+                onTemplateChange();
+            }
+        }
+
+        async function handleAutoParsePaste(event) {
+            // イベントのデフォルトのペースト動作を少し待ってから取得
+            setTimeout(() => {
+                const textarea = document.getElementById('autoParseArea');
+                const text = textarea.value.trim();
+
+                if (!text) return;
+
+                // --- 1. プロジェクト名の抽出 ---
+                const titleMatch = text.match(/【([^】]+)】/) || text.match(/「([^」]+)」/);
+                if (titleMatch && titleMatch[1]) {
+                    document.getElementById('projectName').value = titleMatch[1].trim();
+                }
+
+                // --- 2. URLの抽出と振り分け ---
+                // 行ごとに分割
+                const lines = text.split('\n');
+                let ytUrls = [];
+                let mp4Url = '';
+                let promanageUrl = '';
+                let sheetUrl = '';
+
+                // 各行を見てURLを探す
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.match(/^https?:/)) {
+                        // URLを見つけた場合、直近の空ではない行を探す（見出しとして扱う）
+                        let header = '';
+                        for (let j = i - 1; j >= 0; j--) {
+                            if (lines[j].trim() !== '') {
+                                header = lines[j].toLowerCase();
+                                break;
+                            }
+                        }
+
+                        // 半角スペースまたは全角スペース（　）で分割
+                        const url = line.split(/[ 　]/)[0];
+
+                        // どういうURLか判定
+                        let h = header.toLowerCase();
+                        let u = url.toLowerCase();
+
+                        // Transform fullwidth to halfwidth just for matching
+                        h = h.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+                            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+                        });
+                        u = u.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+                            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+                        });
+
+                        if (h.includes('youtube') || h.includes('youtu.be') || u.includes('youtube') || u.includes('youtu.be') || u.includes('y')) {
+                            ytUrls.push(url);
+                        } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || u.endsWith('.mp4') || u.includes('m')) {
+                            if (!mp4Url) mp4Url = url;
+                        } else if (h.includes('プロマネ') || h.includes('マネ') || u.includes('p')) {
+                            if (!promanageUrl) promanageUrl = url;
+                        } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets') || u.includes('docs.google.com/spreadsheets') || u.includes('s')) {
+                            if (!sheetUrl) sheetUrl = url;
+                        } else {
+                            // 何も該当しない場合はとりあえずMP4かプロマネの空いてる方に入れる（簡易的対応）
+                            if (!mp4Url) mp4Url = url;
+                            else if (!promanageUrl) promanageUrl = url;
+                        }
+                    }
+                }
+
+                // --- 3. UIへの反映 ---
+                // その他のURL反映
+                if (mp4Url) document.getElementById('mp4Url').value = mp4Url;
+                if (promanageUrl) document.getElementById('promanageUrl').value = promanageUrl;
+                if (sheetUrl) document.getElementById('spreadsheetUrl').value = sheetUrl;
+
+                updateOtherViewButton('mp4Url');
+                updateOtherViewButton('promanageUrl');
+                updateOtherViewButton('spreadsheetUrl');
+                // 新規テンプレートの生成
+                let templateText = text;
+                if (titleMatch && titleMatch[1]) {
+                    templateText = templateText.split(titleMatch[1].trim()).join('{プロジェクト名}');
+                }
+
+                // URLs to variables
+                let templateLines = templateText.split('\n');
+                let usedAutoTags = new Set();
+                for (let i = 0; i < templateLines.length; i++) {
+                    const line = templateLines[i].trim();
+                    if (line.match(/^https?:/)) {
+                        let header = '';
+                        for (let j = i - 1; j >= Math.max(0, i - 3); j--) { // 直近3行程度から探す
+                            if (templateLines[j].trim() !== '') {
+                                header = templateLines[j].toLowerCase();
+                                break;
+                            }
+                        }
+
+                        let h = header;
+                        let u = line.toLowerCase().split(/[ 　]/)[0];
+                        h = h.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+                        u = u.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+
+                        if (h.includes('youtube') || h.includes('youtu.be') || u.includes('youtube') || u.includes('youtu.be') || u.includes('y')) {
+                            if (!usedAutoTags.has('{YouTube一覧}')) {
+                                templateLines[i] = line.replace(/^https?:[^\s　]+/, '{YouTube一覧}');
+                                usedAutoTags.add('{YouTube一覧}');
+                            } else {
+                                templateLines[i] = ''; // 重複するYouTubeURL行は消す
+                            }
+                        } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || u.endsWith('.mp4') || u.includes('m')) {
+                            templateLines[i] = line.replace(/^https?:[^\s　]+/, '{MP4URL}');
+                            usedAutoTags.add('{MP4URL}');
+                        } else if (h.includes('プロマネ') || h.includes('マネ') || u.includes('p')) {
+                            templateLines[i] = line.replace(/^https?:[^\s　]+/, '{プロマネURL}');
+                            usedAutoTags.add('{プロマネURL}');
+                        } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets') || u.includes('docs.google.com/spreadsheets') || u.includes('s')) {
+                            templateLines[i] = line.replace(/^https?:[^\s　]+/, '{スプレッドシートURL}');
+                            usedAutoTags.add('{スプレッドシートURL}');
+                        }
+                    }
+                }
+                templateText = templateLines.filter(line => line !== '').join('\n');
+
+                // 必須変数が含まれているかチェック
+                const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+                let missingVars = [];
+                for (const v of requiredVars) {
+                    if (!templateText.includes(v)) {
+                        missingVars.push(v);
+                    }
+                }
+                if (missingVars.length > 0) {
+                    templateText = templateText.trimEnd() + '\n\n' + missingVars.join('\n');
+                }
+
+                // Create new template
+                const now = new Date();
+                const newName = `自動生成テンプレート (${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')})`;
+                const newId = 'template_' + Date.now();
+                customTemplates[newId] = {
+                    name: newName,
+                    content: templateText
+                };
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+
+                const select = document.getElementById('templateSelect');
+                select.value = newId;
+                onTemplateChange();
+
+                // UI上の textarea をクリア
+                document.getElementById('autoParseArea').value = '';
+
+                // Scroll to template select
+                select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // YouTube反映
+                if (ytUrls.length > 0) {
+                    // 現在のYouTube枠をすべて消す
+                    const container = document.getElementById('youtubeEntries');
+                    container.innerHTML = '';
+
+                    // 新しく追加
+                    ytUrls.forEach(yt => {
+                        addYoutubeEntry(yt, '', '');
+                    });
+                } else {
+                    // 空でも1枠は確保
+                    const existing = getYoutubeEntries();
+                    if (existing.length === 0) {
+                        addYoutubeEntry('', '', '');
+                    }
+                }
+
+                // プレビューの更新
+                updatePreview();
+
+                // 成功した旨を表示し、入力欄をクリア
+                textarea.value = '';
+                showToastMessage('✨ メッセージから情報を自動抽出しました！', 'success');
+
+            }, 50);
+        }
+
+        function handleTemplatePaste(event) {
+            // デフォルトのペースト動作をキャンセル
+            event.preventDefault();
+
+            // ペーストされたテキストを取得
+            const paste = (event.clipboardData || window.clipboardData).getData('text');
+
+            // --- スマート置換ロジック ---
+            let smartPaste = paste;
+
+            // 1. プロジェクト名の置換 (【〇〇〇〇〇】 -> 【{プロジェクト名}】)
+            smartPaste = smartPaste.replace(/【[^】]*〇[^】]*】|「[^」]*〇[^」]*」/g, (match) => {
+                if (match.startsWith('「')) return '「{プロジェクト名}」';
+                return '【{プロジェクト名}】';
+            });
+
+            // 2. URLの置換
+            let lines = smartPaste.split('\n');
+            let usedTags = new Set();
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // HTTP(S)から始まる行が見つかったら、直前のラベルを見て置換
+                if (line.match(/^https?:/)) {
+                    let header = '';
+                    for (let j = i - 1; j >= Math.max(0, i - 3); j--) { // 直近3行程度から探す
+                        if (lines[j].trim() !== '') {
+                            header = lines[j].toLowerCase();
+                            break;
+                        }
+                    }
+
+                    let h = header;
+                    let u = line.toLowerCase().split(/[ 　]/)[0];
+                    h = h.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+                    u = u.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+
+                    if (h.includes('youtube') || h.includes('youtu.be') || u.includes('youtube') || u.includes('youtu.be') || u.includes('y')) {
+                        if (!usedTags.has('{YouTube一覧}')) {
+                            lines[i] = line.replace(/^https?:[^\s　]+/, '{YouTube一覧}');
+                            usedTags.add('{YouTube一覧}');
+                        } else {
+                            lines[i] = ''; // 重複するYouTubeURL行は消す
+                        }
+                    } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || u.endsWith('.mp4') || u.includes('m')) {
+                        lines[i] = line.replace(/^https?:[^\s　]+/, '{MP4URL}');
+                        usedTags.add('{MP4URL}');
+                    } else if (h.includes('プロマネ') || h.includes('マネ') || u.includes('p')) {
+                        lines[i] = line.replace(/^https?:[^\s　]+/, '{プロマネURL}');
+                        usedTags.add('{プロマネURL}');
+                    } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets') || u.includes('docs.google.com/spreadsheets') || u.includes('s')) {
+                        lines[i] = line.replace(/^https?:[^\s　]+/, '{スプレッドシートURL}');
+                        usedTags.add('{スプレッドシートURL}');
+                    }
+                }
+            }
+            smartPaste = lines.filter(line => line !== '').join('\n');
+
+            // 現在のテキストエリアの情報を取得
             const editor = document.getElementById('templateEditor');
-            editor.value = DEFAULT_TEMPLATE;
-            localStorage.removeItem('urlSubmitTemplate');
+            const selectionStart = editor.selectionStart;
+            const selectionEnd = editor.selectionEnd;
+            const currentText = editor.value;
+
+            // ペースト後のテキストを構築
+            let newText = currentText.substring(0, selectionStart) + smartPaste + currentText.substring(selectionEnd);
+
+            // 必須変数が含まれているかチェック
+            const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+            let missingVars = [];
+            for (const v of requiredVars) {
+                if (!newText.includes(v)) {
+                    missingVars.push(v);
+                }
+            }
+
+            // 不足している変数があれば末尾に追加
+            if (missingVars.length > 0) {
+                newText = newText.trimEnd() + '\n\n' + missingVars.join('\n');
+            }
+
+            // テキストエリアを更新
+            editor.value = newText;
+
+            // カーソル位置をペーストしたテキストの直後に移動
+            const newCursorPos = selectionStart + smartPaste.length;
+            editor.setSelectionRange(newCursorPos, newCursorPos);
+
+            saveTemplate();
+            updatePreview();
+        }
+        function resetTemplate() {
+            const select = document.getElementById('templateSelect');
+            const currentType = select ? select.value : 'template1';
+
+            // 現在のテンプレート枠のキャッシュを削除
+            localStorage.removeItem(`urlSubmitTemplate_${currentType}`);
+
+            const editor = document.getElementById('templateEditor');
+            editor.value = TEMPLATES[currentType] || DEFAULT_TEMPLATE;
+
+            saveTemplate();
             updatePreview();
         }
 
@@ -1312,7 +1987,6 @@
             // Build YouTube section
             let ytSection = '';
             if (youtubeUrls.length > 0) {
-                ytSection = '▼YouTube限定公開\n';
                 youtubeUrls.forEach(entry => {
                     ytSection += (entry.url || 'URL未設定');
 
@@ -1325,25 +1999,31 @@
                 ytSection = ytSection.trimEnd();
             }
 
-            // Build other URL sections
-            let promanageSection = promanageUrl ? '▼プロマネ\n' + promanageUrl : '';
-            let mp4Section = mp4Url ? '▼MP4\n' + mp4Url : '';
-            let ssSection = spreadsheetUrl ? '▼スプレッドシート\n' + spreadsheetUrl : '';
-
             // Apply template
             const template = document.getElementById('templateEditor').value;
             let message = template
                 .replace(/\{プロジェクト名\}/g, titlePart || '')
-                .replace(/\{作業種別\}/g, workType)
-                .replace(/\{YouTube一覧\}/g, ytSection)
-                .replace(/\{プロマネURL\}/g, promanageSection)
-                .replace(/\{MP4URL\}/g, mp4Section)
-                .replace(/\{スプレッドシートURL\}/g, ssSection);
+                .replace(/\{作業種別\}/g, workType);
+
+            // If the URL exists, replace the tag.
+            // If not, remove the tag AND the single line immediately preceding it (assuming it's a header like ▼MP4).
+            const replaceOrRemove = (msg, tagRaw, val) => {
+                const tag = '\{' + tagRaw + '\}';
+                if (val) {
+                    return msg.replace(new RegExp(tag, 'g'), val);
+                } else {
+                    return msg.replace(new RegExp(`(?:^|\n)[^\n]*\n[^\n]*?${tag}[^\n]*(?=\n|$)`, 'g'), '');
+                }
+            };
+
+            message = replaceOrRemove(message, 'YouTube一覧', ytSection);
+            message = replaceOrRemove(message, 'MP4URL', mp4Url);
+            message = replaceOrRemove(message, 'プロマネURL', promanageUrl);
+            message = replaceOrRemove(message, 'スプレッドシートURL', spreadsheetUrl);
 
             // Clean up excessive blank lines (more than 2 consecutive)
             message = message.replace(/\n{3,}/g, '\n\n');
             message = message.trim();
-
             document.getElementById('preview').textContent = message;
 
             // Save template on change
