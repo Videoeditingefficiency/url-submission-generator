@@ -1,0 +1,2781 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL提出メッセージ生成</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --bg-input: rgba(245, 243, 240, 0.8);
+            --border-color: rgba(200, 50, 50, 0.15);
+            --border-hover: rgba(200, 50, 50, 0.4);
+            --text-primary: #2d2d2d;
+            --text-secondary: #6b6b6b;
+            --text-label: #444444;
+            --accent-primary: #c83232;
+            --accent-secondary: #d44444;
+            --accent-glow: rgba(200, 50, 50, 0.2);
+            --success: #2e9e6a;
+            --success-glow: rgba(46, 158, 106, 0.3);
+            --danger: #c83232;
+            --danger-hover: #a52828;
+            --gradient-1: linear-gradient(135deg, #c83232, #d44444, #e05555);
+            --gradient-2: linear-gradient(135deg, #faf9f7, #f0ebe5);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
+            --shadow-glow: 0 4px 16px rgba(200, 50, 50, 0.2);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Brush stroke decorations */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            top: -30px;
+            right: -30px;
+            width: 200px;
+            height: 200px;
+            background:
+                linear-gradient(135deg, rgba(200, 50, 50, 0.5) 0%, rgba(200, 50, 50, 0.1) 40%, transparent 70%);
+            clip-path: polygon(100% 0%, 60% 0%, 100% 40%);
+        }
+
+        body::after {
+            bottom: 0;
+            left: 0;
+            width: 300px;
+            height: 180px;
+            background:
+                repeating-linear-gradient(-30deg,
+                    rgba(200, 50, 50, 0.08),
+                    rgba(200, 50, 50, 0.08) 3px,
+                    transparent 3px,
+                    transparent 12px),
+                linear-gradient(160deg, rgba(200, 50, 50, 0.12) 0%, transparent 60%);
+            clip-path: polygon(0% 40%, 0% 100%, 70% 100%, 50% 70%, 30% 55%);
+        }
+
+        .bg-decor-tr {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 160px;
+            height: 160px;
+            background: linear-gradient(225deg, rgba(200, 50, 50, 0.35) 0%, transparent 60%);
+            clip-path: polygon(100% 0%, 50% 0%, 100% 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-decor-bl {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 250px;
+            height: 150px;
+            background:
+                repeating-linear-gradient(25deg,
+                    rgba(200, 50, 50, 0.06),
+                    rgba(200, 50, 50, 0.06) 2px,
+                    transparent 2px,
+                    transparent 10px);
+            clip-path: polygon(0% 30%, 0% 100%, 60% 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-decor-br {
+            position: fixed;
+            bottom: -10px;
+            right: -10px;
+            width: 200px;
+            height: 120px;
+            background:
+                repeating-linear-gradient(-25deg,
+                    rgba(200, 50, 50, 0.07),
+                    rgba(200, 50, 50, 0.07) 2px,
+                    transparent 2px,
+                    transparent 8px);
+            clip-path: polygon(40% 100%, 100% 100%, 100% 30%, 70% 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Mac titlebar drag region */
+        .titlebar {
+            -webkit-app-region: drag;
+            height: 38px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 48px 20px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-card);
+            transition: border-color var(--transition);
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--gradient-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-label);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="url"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="url"]:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* YouTube entries */
+        .youtube-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .youtube-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            padding: 16px;
+            background: #fff;
+            border: 1px solid rgba(200, 50, 50, 0.1);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+        }
+
+        .youtube-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .youtube-entry-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .youtube-entry-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .btn-icon-small {
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(200, 50, 50, 0.2);
+            border-radius: var(--radius-sm);
+            background: rgba(200, 50, 50, 0.05);
+            color: var(--accent-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: all var(--transition);
+        }
+
+        .btn-icon-small:hover {
+            background: rgba(200, 50, 50, 0.1);
+            border-color: rgba(200, 50, 50, 0.4);
+        }
+
+        .btn-view-video {
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(46, 158, 106, 0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(46, 158, 106, 0.08);
+            color: #2e9e6a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all var(--transition);
+        }
+
+        .btn-view-video:hover {
+            background: rgba(46, 158, 106, 0.18);
+            border-color: rgba(46, 158, 106, 0.5);
+            transform: scale(1.05);
+        }
+
+        .url-with-button {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .url-with-button input {
+            flex: 1;
+        }
+
+        .btn-view-video.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-remove.small {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+        }
+
+        .note-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: var(--accent-primary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all var(--transition);
+            opacity: 0.7;
+        }
+
+        .note-toggle:hover {
+            opacity: 1;
+            background: rgba(200, 50, 50, 0.06);
+        }
+
+        .note-area {
+            display: none;
+        }
+
+        .note-area.visible {
+            display: block;
+        }
+
+        .note-area input {
+            font-size: 0.8rem !important;
+            padding: 6px 10px !important;
+            height: 32px !important;
+            width: 25% !important;
+            min-width: 150px;
+        }
+
+        .project-entry {
+            display: grid;
+            grid-template-columns: 1fr 44px;
+            gap: 10px;
+            align-items: end;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .youtube-entry label {
+            font-size: 0.78rem;
+        }
+
+        .btn-remove {
+            width: 44px;
+            height: 44px;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--danger);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all var(--transition);
+        }
+
+        .btn-remove:hover {
+            background: rgba(248, 113, 113, 0.2);
+            border-color: var(--danger);
+            transform: scale(1.05);
+        }
+
+        .btn-add {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: 1px dashed var(--border-hover);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--accent-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all var(--transition);
+            margin-top: 4px;
+        }
+
+        .btn-add:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Platform select */
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all var(--transition);
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+
+        select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* Template editor */
+        textarea {
+            width: 100%;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            font-size: 0.88rem;
+            line-height: 1.8;
+            transition: all var(--transition);
+            outline: none;
+            resize: vertical;
+            min-height: 180px;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xs);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all var(--transition);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .template-hint {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-radius: var(--radius-xs);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .template-hint code {
+            background: rgba(99, 102, 241, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.76rem;
+            color: var(--accent-secondary);
+        }
+
+        .template-hint-toggle {
+            background: none;
+            border: none;
+            color: var(--accent-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            padding: 0;
+            transition: color var(--transition);
+        }
+
+        .template-hint-toggle:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Preview area */
+        .preview-area {
+            position: relative;
+        }
+
+        .preview-content {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            min-height: 200px;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        .btn-copy {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--gradient-1);
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-copy::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-copy:hover::before {
+            left: 100%;
+        }
+
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+
+        .btn-copy.copied {
+            background: linear-gradient(135deg, var(--success), #10b981);
+        }
+
+        .btn-submit-sheet {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #2563eb, #3b82f6, #60a5fa);
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit-sheet::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-submit-sheet:hover::before {
+            left: 100%;
+        }
+
+        .btn-submit-sheet:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-submit-sheet:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit-sheet.sending {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-submit-sheet.sent-ok {
+            background: linear-gradient(135deg, var(--success), #10b981);
+        }
+
+        .btn-submit-sheet.sent-err {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+
+        .btn-submit-sheet .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .btn-submit-sheet.sending .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .gas-url-input {
+            font-size: 0.82rem !important;
+            padding: 8px 12px !important;
+        }
+
+        .btn-clear {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border: 1px dashed rgba(200, 50, 50, 0.3);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--accent-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 10px;
+        }
+
+        .btn-clear:hover {
+            background: rgba(200, 50, 50, 0.06);
+            border-color: rgba(200, 50, 50, 0.5);
+        }
+
+        /* YouTube Monitor */
+        .btn-monitor {
+            height: 36px;
+            padding: 0 10px;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(234, 179, 8, 0.08);
+            color: #b45309;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            gap: 4px;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+
+        .btn-monitor:hover {
+            background: rgba(234, 179, 8, 0.18);
+            border-color: rgba(234, 179, 8, 0.5);
+        }
+
+        .btn-monitor.monitoring {
+            background: rgba(234, 179, 8, 0.2);
+            border-color: rgba(234, 179, 8, 0.5);
+            animation: pulse-monitor 2s ease-in-out infinite;
+        }
+
+        .btn-monitor.ready {
+            background: rgba(46, 158, 106, 0.12);
+            border-color: rgba(46, 158, 106, 0.4);
+            color: #2e9e6a;
+            cursor: default;
+        }
+
+        .btn-monitor.failed {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: rgba(220, 38, 38, 0.3);
+            color: #dc2626;
+            cursor: default;
+        }
+
+        @keyframes pulse-monitor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        .status-badge.processing {
+            background: rgba(234, 179, 8, 0.15);
+            color: #b45309;
+        }
+
+        .status-badge.ready {
+            background: rgba(46, 158, 106, 0.15);
+            color: #2e9e6a;
+        }
+
+        .status-badge.failed {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 14px 24px;
+            background: rgba(46, 158, 106, 0.12);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(46, 158, 106, 0.3);
+            border-radius: var(--radius-sm);
+            color: var(--success);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Collapsible section */
+        .card-title.collapsible {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .card-title.collapsible:hover {
+            color: var(--accent-secondary);
+        }
+
+        .card-title .toggle-arrow {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .card-title.collapsible:hover .toggle-arrow {
+            color: var(--accent-secondary);
+        }
+
+        .card-title .toggle-arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        .collapsible-content.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            .card {
+                padding: 24px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            .project-entry {
+                grid-template-columns: 1fr 40px;
+                gap: 8px;
+            }
+
+            .youtube-entry input,
+            .youtube-entry select {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            .youtube-entry {
+                flex-direction: column;
+            }
+
+            .youtube-entry-actions {
+                flex-direction: row;
+                justify-content: flex-end;
+            }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            width: 300px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            margin-bottom: 16px;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="titlebar"></div>
+    <div class="bg-decor-tr"></div>
+    <div class="bg-decor-bl"></div>
+    <div class="bg-decor-br"></div>
+    <div class="container">
+        <header class="header">
+            <h1>📋 URL提出メッセージ生成</h1>
+            <p>URLと情報を入力して、提出メッセージを自動生成します</p>
+        </header>
+
+
+        <!-- 基本情報 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">📝</div>
+                基本情報
+            </div>
+            <div class="form-group">
+                <label for="titleType">タイトル</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="titleType" onchange="onTitleTypeChange()" style="flex: 1;">
+                    </select>
+                    <button class="btn-secondary" onclick="addTitleType()" title="新しく追加">➕</button>
+                    <button class="btn-secondary" onclick="renameTitleType()" title="名前を変更">✏️</button>
+                    <button class="btn-secondary" onclick="deleteTitleType()" title="削除">🗑️</button>
+                </div>
+                <input type="text" id="titleTypeCustom" placeholder="タイトルを入力" style="display:none; margin-top:8px;"
+                    oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+                <label for="projectName">プロジェクト名</label>
+                <input type="text" id="projectName" placeholder="例: 担当している動画の名前" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+                <label for="workType">作業種別</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="workType" onchange="onWorkTypeChange()" style="flex: 1;">
+                    </select>
+                    <button class="btn-secondary" onclick="addWorkType()" title="新しく追加">➕</button>
+                    <button class="btn-secondary" onclick="renameWorkType()" title="名前を変更">✏️</button>
+                    <button class="btn-secondary" onclick="deleteWorkType()" title="削除">🗑️</button>
+                </div>
+                <input type="text" id="workTypeCustom" placeholder="作業内容を入力" style="display:none; margin-top:8px;"
+                    oninput="updatePreview()">
+            </div>
+        </div>
+
+        <!-- YouTube限定公開 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🎬</div>
+                YouTube限定公開
+            </div>
+            <div class="youtube-entries" id="youtubeEntries">
+                <!-- Dynamic entries will be added here -->
+            </div>
+            <button class="btn-add" onclick="addYoutubeEntry()">
+                ＋ 動画を追加
+            </button>
+        </div>
+
+        <!-- その他のURL -->
+        <div class="card">
+            <div class="card-title collapsible" onclick="toggleSection('otherUrls')">
+                <div class="icon">🔗</div>
+                その他のURL
+                <span class="toggle-arrow" id="otherUrlsArrow">▼</span>
+            </div>
+            <div class="collapsible-content" id="otherUrls">
+                <div class="form-group">
+                    <label for="mp4Url">MP4 URL</label>
+                    <div class="url-with-button">
+                        <input type="url" id="mp4Url" placeholder="https://..."
+                            oninput="updatePreview(); updateOtherViewButton('mp4Url')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-mp4Url"
+                            onclick="openOtherUrl('mp4Url')" title="URLを確認">▶</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="promanageUrl">プロマネ URL</label>
+                    <div class="url-with-button">
+                        <input type="url" id="promanageUrl" placeholder="https://..."
+                            oninput="updatePreview(); updateOtherViewButton('promanageUrl')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-promanageUrl"
+                            onclick="openOtherUrl('promanageUrl')" title="URLを確認">▶</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="spreadsheetUrl">スプレッドシート URL</label>
+                    <div class="url-with-button">
+                        <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."
+                            oninput="updatePreview(); updateOtherViewButton('spreadsheetUrl')">
+                        <button type="button" class="btn-view-video disabled" id="btn-view-spreadsheetUrl"
+                            onclick="openOtherUrl('spreadsheetUrl')" title="URLを確認">▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- スプレッドシート連携設定 -->
+        <div class="card">
+            <div class="card-title collapsible" onclick="toggleSection('gasSettings')">
+                <div class="icon">📊</div>
+                スプレッドシート連携設定
+                <span class="toggle-arrow" id="gasSettingsArrow">▼</span>
+            </div>
+            <div class="collapsible-content" id="gasSettings">
+                <div class="form-group">
+                    <label for="gasUrl">GAS WebアプリURL</label>
+                    <input type="url" id="gasUrl" class="gas-url-input"
+                        placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
+                    <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5;">
+                        進捗管理スプレッドシートの「拡張機能」→「Apps Script」からデプロイしたWebアプリのURLを入力してください
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- メッセージから自動入力 -->
+        <div class="card auto-parse-section" style="border-color: rgba(16, 185, 129, 0.4);">
+            <div class="card-title collapsible" style="margin-bottom: 0;" onclick="toggleSection('autoParseContent')">
+                <div class="icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">✨</div>
+                メッセージから自動入力
+                <span class="toggle-arrow collapsed" id="autoParseContentArrow">▼</span>
+            </div>
+
+            <div class="collapsible-content hidden" id="autoParseContent" style="margin-top: 16px;">
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;">
+                    依頼メッセージや過去の提出メッセージを貼り付けると、情報を自動抽出します
+                </p>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <textarea id="autoParseArea" rows="4" placeholder="ここへメッセージをペーストしてください"
+                        onpaste="handleAutoParsePaste(event)"
+                        style="border-color: rgba(16, 185, 129, 0.3); font-size: 0.85rem; padding: 12px;"></textarea>
+                    <div
+                        style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                        <span style="color: #10b981;">ℹ️</span> 貼り付けると即座に自動入力され、新しくテンプレートが作成されます。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- テンプレート編集 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">✏️</div>
+                テンプレート編集
+            </div>
+            <div class="form-group">
+                <label for="templateSelect">メッセージテンプレート</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="templateSelect" onchange="onTemplateChange()" style="flex: 1;"></select>
+                    <button class="btn-secondary" onclick="moveTemplateUp()" title="ひとつ上へ移動">⬆️</button>
+                    <button class="btn-secondary" onclick="moveTemplateDown()" title="ひとつ下へ移動">⬇️</button>
+                    <button class="btn-secondary" onclick="addTemplate()" title="新しく追加">➕</button>
+                    <button class="btn-secondary" onclick="renameTemplate()" title="名前を変更">✏️</button>
+                    <button class="btn-secondary" onclick="deleteTemplate()" title="削除">🗑️</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="templateEditor">メッセージテンプレート</label>
+                <textarea id="templateEditor" rows="12" oninput="onTemplateEditorInput()"
+                    onpaste="handleTemplatePaste(event)"></textarea>
+            </div>
+            <div class="template-actions">
+                <button class="btn-secondary" onclick="resetTemplate()">🔄 デフォルトに戻す</button>
+                <button class="btn-secondary template-hint-toggle" onclick="toggleHint()">💡 変数ヘルプ</button>
+            </div>
+            <div class="template-hint" id="templateHint" style="display:none;">
+                以下の変数がテンプレート内で使用できます：<br>
+                <code>{プロジェクト名}</code> プロジェクト名<br>
+                <code>{作業種別}</code> 制作または修正<br>
+                <code>{YouTube一覧}</code> YouTube限定公開のURL一覧<br>
+                <code>{プロマネURL}</code> プロマネURL<br>
+                <code>{MP4URL}</code> MP4 URL<br>
+                <code>{スプレッドシートURL}</code> スプレッドシートURL
+            </div>
+        </div>
+
+        <!-- プレビュー -->
+        <div class="card">
+            <div class="card-title" style="justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="icon">👁</div>
+                    プレビュー
+                </div>
+                <label
+                    style="font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-secondary);">
+                    <input type="checkbox" id="spaceToggle" checked onchange="saveTemplate(); updatePreview();">
+                    URLの間に空白行を空ける
+                </label>
+            </div>
+            <div class="preview-area">
+                <div class="preview-content" id="preview"></div>
+                <button class="btn-copy" id="copyBtn" onclick="copyToClipboard()">
+                    📋 クリップボードにコピー
+                </button>
+                <button class="btn-submit-sheet" id="submitSheetBtn" onclick="submitToSpreadsheet()">
+                    <span class="spinner"></span>
+                    <span id="submitSheetBtnText">📊 スプレッドシートに自動入力</span>
+                </button>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn-action" onclick="resetTemplatesToDefault()"
+                        style="flex: 1; border: 1px solid #ddd; background: #f9f9f9; color: #666;">
+                        🔄 初期テンプレートに戻す
+                    </button>
+                    <button class="btn-action" onclick="saveTemplate()" style="flex: 2;">
+                        💾 この内容を保存
+                    </button>
+                </div>
+                <button class="btn-clear" onclick="clearInputs()">
+                    🗑️ 入力をクリア
+                </button>
+            </div>
+        </div>
+    </div>
+    <div style="text-align: right; color: rgba(0, 0, 0, 0.3); font-size: 0.75rem; margin-top: 20px;">
+        URL Submission Generator v2.4
+    </div>
+    </div>
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        ✅ コピーしました！
+    </div>
+
+    <!-- Custom Prompt Modal -->
+    <div id="customPromptModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="customPromptMessage" class="modal-title"></div>
+            <input type="text" id="customPromptInput" class="modal-input">
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeCustomPrompt(false)">キャンセル</button>
+                <button class="btn-view-video" style="opacity: 1; pointer-events: auto; padding: 8px 16px;"
+                    onclick="closeCustomPrompt(true)">OK</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Initialize with default entries based on the example
+        let youtubeEntryId = 0;
+
+        // --- Project entry functions ---
+        let projectEntryId = 0;
+
+        function addProjectEntry(name = '') {
+            const container = document.getElementById('projectEntries');
+            const id = projectEntryId++;
+            const entry = document.createElement('div');
+            entry.className = 'project-entry';
+            entry.id = `proj-entry-${id}`;
+            entry.innerHTML = `
+        <div class="form-group">
+          <input type="text" placeholder="例: 担当している動画の名前" value="${name}" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <button class="btn-remove" onclick="removeProjectEntry(${id})">✕</button>
+        </div>
+      `;
+            container.appendChild(entry);
+            updatePreview();
+        }
+
+        function removeProjectEntry(id) {
+            const entry = document.getElementById(`proj-entry-${id}`);
+            if (entry) {
+                entry.style.animation = 'slideOut 0.25s ease forwards';
+                setTimeout(() => {
+                    entry.remove();
+                    updatePreview();
+                }, 250);
+            }
+        }
+
+        function getProjectNames() {
+            const container = document.getElementById('projectEntries');
+            const entries = container.querySelectorAll('.project-entry');
+            const names = [];
+            entries.forEach(entry => {
+                const input = entry.querySelector('input');
+                const val = input.value.trim();
+                if (val) names.push(val);
+            });
+            return names;
+        }
+
+        // --- YouTube entry functions ---
+        function addYoutubeEntry(url = '', note = '', title = '') {
+            const container = document.getElementById('youtubeEntries');
+            const id = youtubeEntryId++;
+            const entry = document.createElement('div');
+            entry.className = 'youtube-entry';
+            entry.id = `yt-entry-${id}`;
+            entry.innerHTML = `
+        <div class="youtube-entry-main">
+          <div class="form-group yt-title-container" data-raw-title="${title}" style="display:none; margin-bottom:2px">
+            <div class="yt-title" style="font-size: 0.85rem; padding: 0 4px; color: var(--text-secondary); font-weight: 500;"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="url" class="yt-url" placeholder="https://youtu.be/..." value="${url}" oninput="updatePreview(); updateViewButton(${id})" style="flex:1">
+              <button type="button" class="btn-monitor" id="btn-monitor-${id}" onclick="toggleMonitor(${id})" title="処理状況を監視">🔍 状況</button>
+            </div>
+            <div class="yt-status" id="yt-status-${id}" style="margin-top: 4px;"></div>
+          </div>
+        </div>
+        <div class="youtube-entry-actions">
+          <button type="button" class="btn-view-video disabled" id="btn-view-${id}" onclick="openVideoUrl(${id})" title="動画を確認">▶</button>
+          <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryUp(${id})" title="上に移動">▲</button>
+          <button type="button" class="btn-icon-small" onclick="moveYoutubeEntryDown(${id})" title="下に移動">▼</button>
+          <button type="button" class="btn-remove small" onclick="removeYoutubeEntry(${id})" title="削除">✕</button>
+        </div>
+      `;
+            container.appendChild(entry);
+            updatePreview();
+            // URLが初期値として渡された場合、ボタンの状態を更新
+            if (url) updateViewButton(id);
+        }
+
+        function moveYoutubeEntryUp(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry && entry.previousElementSibling) {
+                entry.parentNode.insertBefore(entry, entry.previousElementSibling);
+                updatePreview();
+            }
+        }
+
+        function moveYoutubeEntryDown(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry && entry.nextElementSibling) {
+                entry.parentNode.insertBefore(entry.nextElementSibling, entry);
+                updatePreview();
+            }
+        }
+
+
+        function removeYoutubeEntry(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (entry) {
+                entry.style.animation = 'slideOut 0.25s ease forwards';
+                setTimeout(() => {
+                    entry.remove();
+                    updatePreview();
+                }, 250);
+            }
+        }
+
+        function openVideoUrl(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (!entry) return;
+            const urlInput = entry.querySelector('.yt-url');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function updateViewButton(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (!entry) return;
+            const urlInput = entry.querySelector('.yt-url');
+            const btn = document.getElementById(`btn-view-${id}`);
+            if (!btn) return;
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (url) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        }
+
+        function updateAllViewButtons() {
+            document.querySelectorAll('.youtube-entry').forEach(entry => {
+                const id = entry.id.replace('yt-entry-', '');
+                updateViewButton(id);
+            });
+        }
+
+        // --- その他URL確認ボタン ---
+        function openOtherUrl(inputId) {
+            const input = document.getElementById(inputId);
+            const url = input ? input.value.trim() : '';
+            if (url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function updateOtherViewButton(inputId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(`btn-view-${inputId}`);
+            if (!input || !btn) return;
+            const url = input.value.trim();
+            if (url) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        }
+
+        function updateYouTubeTitles() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const entries = document.querySelectorAll('.youtube-entry');
+
+            let generatedCount = 0;
+            const needsGeneration = Array.from(entries).filter(entry => {
+                const container = entry.querySelector('.yt-title-container');
+                return !container.dataset.rawTitle;
+            });
+
+            entries.forEach((entry) => {
+                const titleContainer = entry.querySelector('.yt-title-container');
+                const titleDiv = entry.querySelector('.yt-title');
+                const rawTitle = titleContainer.dataset.rawTitle;
+
+                if (rawTitle) {
+                    titleDiv.textContent = rawTitle;
+                    titleContainer.style.display = 'block';
+                } else if (projectName) {
+                    generatedCount++;
+                    const titleText = needsGeneration.length > 1 ? `${projectName} - ${generatedCount}` : projectName;
+                    titleDiv.textContent = titleText;
+                    titleContainer.style.display = 'block';
+                } else {
+                    titleDiv.textContent = '';
+                    titleContainer.style.display = 'none';
+                }
+            });
+        }
+
+        function getYoutubeEntries() {
+            const container = document.getElementById('youtubeEntries');
+            const entries = container.querySelectorAll('.youtube-entry');
+            const result = [];
+            entries.forEach(entry => {
+                const titleDiv = entry.querySelector('.yt-title');
+                const urlInput = entry.querySelector('.yt-url');
+                const title = titleDiv ? titleDiv.textContent.trim() : '';
+                const url = urlInput ? urlInput.value.trim() : '';
+                if (url || title) result.push({ title, url });
+            });
+            return result;
+        }
+
+        const TEMPLATES = {
+            template1: `{タイトル}
+
+お世話になっております！
+
+「{プロジェクト名}」の{作業種別}が完了いたしましたのでご提出させていただきます！
+ご確認よろしくお願いいたします！
+
+▼YouTube限定公開
+{YouTube一覧}
+
+▼MP4
+{MP4URL}
+
+▼プロマネ
+{プロマネURL}
+
+▼スプレッドシート
+{スプレッドシートURL}`,
+            template2: `お疲れ様です。
+
+「{プロジェクト名}」の{作業種別}を提出いたします。
+ご確認のほど、よろしくお願いいたします。
+
+▼YouTube限定公開
+{YouTube一覧}
+
+▼MP4
+{MP4URL}
+
+▼プロマネ
+{プロマネURL}
+
+▼スプレッドシート
+{スプレッドシートURL}`,
+            template3: `お世話になっております。
+
+「{プロジェクト名}」につきまして、{作業種別}が完了いたしましたのでご提出申し上げます。
+お忙しいところ恐縮ですが、お手すきの際にご確認いただけますと幸いです。
+何卒よろしくお願い申し上げます。
+
+▼YouTube限定公開
+{YouTube一覧}
+
+▼MP4
+{MP4URL}
+
+▼プロマネ
+{プロマネURL}
+
+▼スプレッドシート
+{スプレッドシートURL}`
+        };
+
+        const DEFAULT_TEMPLATE = TEMPLATES.template1;
+
+        // 無限テンプレート管理データ
+        let customTemplates = {};
+
+        function initTemplate() {
+            // マイグレーション: 旧仕様のデータを新仕様に変換
+            const migrateData = localStorage.getItem('urlSubmitTemplatesData');
+
+            if (!migrateData) {
+                // 初回のみ既存ローカルデータを移行
+                customTemplates = {
+                    'template1': { name: 'テンプレート1（標準ベース）', content: localStorage.getItem('urlSubmitTemplate_template1') || TEMPLATES.template1 },
+                    'template2': { name: 'テンプレート2（シンプルベース）', content: localStorage.getItem('urlSubmitTemplate_template2') || TEMPLATES.template2 },
+                    'template3': { name: 'テンプレート3（丁寧ベース）', content: localStorage.getItem('urlSubmitTemplate_template3') || TEMPLATES.template3 }
+                };
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+            } else {
+                try {
+                    customTemplates = JSON.parse(migrateData);
+                } catch (e) {
+                    customTemplates = { 'template1': { name: '標準ベース', content: TEMPLATES.template1 } };
+                }
+            }
+
+            renderTemplateSelect();
+
+            const select = document.getElementById('templateSelect');
+            if (select) {
+                // 常に最初のテンプレートを初期選択する
+                select.value = Object.keys(customTemplates)[0];
+                // localStorageの内容もトップのものに上書き
+                localStorage.setItem('urlSubmitTemplateType', select.value);
+            }
+        }
+
+        function resetTemplatesToDefault() {
+            if (confirm("すべてのテンプレートを初期状態（デフォルト）に戻しますか？\n※ご自身で追加・編集したテンプレートはすべて消去されます。")) {
+                localStorage.removeItem('urlSubmitTemplatesData');
+                localStorage.removeItem('urlSubmitTemplate_template1');
+                localStorage.removeItem('urlSubmitTemplate_template2');
+                localStorage.removeItem('urlSubmitTemplate_template3');
+                initTemplate();
+                onTemplateChange();
+                showToastMessage('🔄 テンプレートを初期状態にリセットしました', 'success');
+            }
+        }
+
+        loadCurrentTemplate();
+
+        const savedSpaceToggle = localStorage.getItem('urlSubmitSpaceToggle');
+        if (savedSpaceToggle !== null) {
+            document.getElementById('spaceToggle').checked = savedSpaceToggle === 'true';
+        }
+
+        // --- タイトル カスタマイズ機能 ---
+        let customTitles = ['【ご提出】', '【初稿提出】', '【修正提出】'];
+
+        function loadTitles() {
+            const saved = localStorage.getItem('urlSubmitTitlesData');
+            if (saved) {
+                try {
+                    customTitles = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to parse titles', e);
+                }
+            }
+            renderTitleSelect();
+        }
+
+        function renderTitleSelect() {
+            const select = document.getElementById('titleType');
+            const currentValue = select.value;
+            select.innerHTML = '';
+
+            customTitles.forEach(type => {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = type;
+                select.appendChild(opt);
+            });
+
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.textContent = '自分で入力';
+            select.appendChild(customOpt);
+
+            if (currentValue && (customTitles.includes(currentValue) || currentValue === 'custom')) {
+                select.value = currentValue;
+            } else if (customTitles.length > 0) {
+                select.value = customTitles[0];
+            } else {
+                select.value = 'custom';
+            }
+
+            onTitleTypeChange();
+        }
+
+        function addTitleType() {
+            const newTitle = prompt('追加するタイトル（例: 【納品】）:');
+            if (newTitle && newTitle.trim()) {
+                const titleStr = newTitle.trim();
+                if (!customTitles.includes(titleStr)) {
+                    customTitles.push(titleStr);
+                    saveTitles();
+                    renderTitleSelect();
+                    document.getElementById('titleType').value = titleStr;
+                    onTitleTypeChange();
+                } else {
+                    alert('既に存在しているタイトルです。');
+                }
+            }
+        }
+
+        function renameTitleType() {
+            const select = document.getElementById('titleType');
+            if (select.value === 'custom') {
+                alert('「自分で入力」は名前変更できません。');
+                return;
+            }
+            const currentTitle = select.value;
+            const newTitle = prompt('新しい名前:', currentTitle);
+            if (newTitle && newTitle.trim() && newTitle.trim() !== currentTitle) {
+                const titleStr = newTitle.trim();
+                const index = customTitles.indexOf(currentTitle);
+                if (index > -1) {
+                    customTitles[index] = titleStr;
+                    saveTitles();
+                    renderTitleSelect();
+                    document.getElementById('titleType').value = titleStr;
+                    onTitleTypeChange();
+                }
+            }
+        }
+
+        function deleteTitleType() {
+            const select = document.getElementById('titleType');
+            if (select.value === 'custom') {
+                alert('「自分で入力」は削除できません。');
+                return;
+            }
+            if (confirm(`タイトル「${select.value}」を削除してもよろしいですか？`)) {
+                customTitles = customTitles.filter(t => t !== select.value);
+                saveTitles();
+                renderTitleSelect();
+            }
+        }
+
+        function saveTitles() {
+            localStorage.setItem('urlSubmitTitlesData', JSON.stringify(customTitles));
+        }
+
+        function onTitleTypeChange() {
+            const select = document.getElementById('titleType');
+            const customInput = document.getElementById('titleTypeCustom');
+            if (select.value === 'custom') {
+                customInput.style.display = 'block';
+                if (!customInput.value) {
+                    customInput.value = '【】';
+                }
+            } else {
+                customInput.style.display = 'none';
+            }
+            updatePreview();
+        }
+
+        // --- 作業種別 カスタマイズ機能 ---
+        let customWorkTypes = ['修正', '制作'];
+
+        function loadWorkTypes() {
+            const saved = localStorage.getItem('urlSubmitWorkTypesData');
+            if (saved) {
+                try {
+                    customWorkTypes = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to parse work types', e);
+                }
+            }
+            renderWorkTypeSelect();
+        }
+
+        function renderWorkTypeSelect() {
+            const select = document.getElementById('workType');
+            const currentValue = select.value;
+            select.innerHTML = '';
+
+            customWorkTypes.forEach(type => {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = type;
+                select.appendChild(opt);
+            });
+
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.textContent = '自分で入力';
+            select.appendChild(customOpt);
+
+            // 選択状態を復元（存在しない場合は最初の要素を選択）
+            if (currentValue && (customWorkTypes.includes(currentValue) || currentValue === 'custom')) {
+                select.value = currentValue;
+            } else if (customWorkTypes.length > 0) {
+                select.value = customWorkTypes[0];
+            } else {
+                select.value = 'custom';
+            }
+
+            onWorkTypeChange();
+        }
+
+        function addWorkType() {
+            showCustomPrompt('新しい作業種別の名前を入力:', '', function (name) {
+                if (!name || name.trim() === '') return;
+                name = name.trim();
+                if (customWorkTypes.includes(name) || name === 'custom') {
+                    alert('すでに存在する名前です。');
+                    return;
+                }
+                customWorkTypes.push(name);
+                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                renderWorkTypeSelect();
+                document.getElementById('workType').value = name;
+                onWorkTypeChange();
+                updatePreview();
+            });
+        }
+
+        function renameWorkType() {
+            const select = document.getElementById('workType');
+            const currentName = select.value;
+            if (currentName === 'custom') {
+                alert('「自分で入力」項目は変更できません。');
+                return;
+            }
+            showCustomPrompt('作業種別の名前を変更:', currentName, function (newName) {
+                if (!newName || newName.trim() === '') return;
+                newName = newName.trim();
+                if (newName === currentName) return;
+                if (customWorkTypes.includes(newName) || newName === 'custom') {
+                    alert('すでに存在する名前です。');
+                    return;
+                }
+                const index = customWorkTypes.indexOf(currentName);
+                if (index !== -1) {
+                    customWorkTypes[index] = newName;
+                    localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                    renderWorkTypeSelect();
+                    document.getElementById('workType').value = newName;
+                    onWorkTypeChange();
+                    updatePreview();
+                }
+            });
+        }
+
+        function deleteWorkType() {
+            const select = document.getElementById('workType');
+            const currentName = select.value;
+            if (currentName === 'custom') {
+                alert('「自分で入力」項目は削除できません。');
+                return;
+            }
+            if (customWorkTypes.length <= 1) {
+                alert('最低1つの作業種別が必要です。');
+                return;
+            }
+            if (confirm(`作業種別「${currentName}」を削除してもよろしいですか？`)) {
+                customWorkTypes = customWorkTypes.filter(t => t !== currentName);
+                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
+                renderWorkTypeSelect();
+                updatePreview();
+            }
+        }
+
+        loadTitles();
+        loadWorkTypes();
+
+        function renderTemplateSelect() {
+            const select = document.getElementById('templateSelect');
+
+            select.innerHTML = '';
+            for (const [id, data] of Object.entries(customTemplates)) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = data.name;
+                select.appendChild(option);
+            }
+        }
+
+        function loadCurrentTemplate() {
+            const select = document.getElementById('templateSelect');
+            const editor = document.getElementById('templateEditor');
+            const currentType = select ? select.value : Object.keys(customTemplates)[0];
+
+            if (customTemplates[currentType]) {
+                editor.value = customTemplates[currentType].content;
+            }
+            updatePreview();
+        }
+
+        function saveTemplate() {
+            const editor = document.getElementById('templateEditor');
+            const select = document.getElementById('templateSelect');
+
+            const currentType = select.value;
+
+            // 現在のテキスト内容を保存
+            if (customTemplates[currentType]) {
+                customTemplates[currentType].content = editor.value;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+            }
+
+            localStorage.setItem('urlSubmitTemplateType', currentType);
+
+            const spaceToggle = document.getElementById('spaceToggle');
+            if (spaceToggle) {
+                localStorage.setItem('urlSubmitSpaceToggle', spaceToggle.checked);
+            }
+        }
+
+        function onTemplateChange() {
+            loadCurrentTemplate();
+            saveTemplate();
+        }
+
+        function onTemplateEditorInput() {
+            saveTemplate();
+            updatePreview();
+        }
+
+        // Custom Prompt Logic
+        let customPromptCallback = null;
+
+        function showCustomPrompt(message, defaultValue, callback) {
+            document.getElementById('customPromptMessage').textContent = message;
+            const input = document.getElementById('customPromptInput');
+            input.value = defaultValue;
+
+            document.getElementById('customPromptModal').style.display = 'flex';
+            input.focus();
+            input.select();
+
+            customPromptCallback = callback;
+        }
+
+        function closeCustomPrompt(isOk) {
+            document.getElementById('customPromptModal').style.display = 'none';
+            if (customPromptCallback) {
+                const val = isOk ? document.getElementById('customPromptInput').value : null;
+                customPromptCallback(val);
+                customPromptCallback = null;
+            }
+        }
+
+        // --- テンプレート操作機能 ---
+        function addTemplate() {
+            showCustomPrompt('新しいテンプレート名を入力してください:', 'カスタムテンプレート', function (name) {
+                const newId = 'template_' + Date.now();
+                customTemplates[newId] = {
+                    name: name,
+                    content: DEFAULT_TEMPLATE
+                };
+
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+
+                const select = document.getElementById('templateSelect');
+                select.value = newId;
+                onTemplateChange();
+            });
+        }
+
+        function renameTemplate() {
+            const select = document.getElementById('templateSelect');
+            const currentId = select.value;
+            const currentName = customTemplates[currentId].name;
+
+            showCustomPrompt('テンプレートの名前を変更:', currentName, function (newName) {
+                customTemplates[currentId].name = newName;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+
+                // 選択状態を保持したまま再描画
+                renderTemplateSelect();
+                select.value = currentId;
+            });
+        }
+
+        function deleteTemplate() {
+            const select = document.getElementById('templateSelect');
+
+            if (Object.keys(customTemplates).length <= 1) {
+                alert('最低1つのテンプレートが必要です。');
+                return;
+            }
+
+            const currentId = select.value;
+            const currentName = customTemplates[currentId].name;
+
+            if (confirm(`テンプレート「${currentName}」を削除してもよろしいですか？`)) {
+                delete customTemplates[currentId];
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+
+                renderTemplateSelect();
+                select.value = Object.keys(customTemplates)[0];
+                onTemplateChange();
+            }
+        }
+
+        function moveTemplateUp() {
+            const select = document.getElementById('templateSelect');
+            const currentId = select.value;
+            const keys = Object.keys(customTemplates);
+            const index = keys.indexOf(currentId);
+
+            if (index > 0) {
+                const newTemplates = {};
+                for (let i = 0; i < keys.length; i++) {
+                    if (i === index - 1) {
+                        newTemplates[keys[index]] = customTemplates[keys[index]];
+                    } else if (i === index) {
+                        newTemplates[keys[index - 1]] = customTemplates[keys[index - 1]];
+                    } else {
+                        newTemplates[keys[i]] = customTemplates[keys[i]];
+                    }
+                }
+                customTemplates = newTemplates;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+                select.value = currentId;
+            }
+        }
+
+        function moveTemplateDown() {
+            const select = document.getElementById('templateSelect');
+            const currentId = select.value;
+            const keys = Object.keys(customTemplates);
+            const index = keys.indexOf(currentId);
+
+            if (index < keys.length - 1) {
+                const newTemplates = {};
+                for (let i = 0; i < keys.length; i++) {
+                    if (i === index) {
+                        newTemplates[keys[index + 1]] = customTemplates[keys[index + 1]];
+                    } else if (i === index + 1) {
+                        newTemplates[keys[index]] = customTemplates[keys[index]];
+                    } else {
+                        newTemplates[keys[i]] = customTemplates[keys[i]];
+                    }
+                }
+                customTemplates = newTemplates;
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+                select.value = currentId;
+            }
+        }
+
+        async function handleAutoParsePaste(event) {
+            // イベントのデフォルトのペースト動作を少し待ってから取得
+            setTimeout(() => {
+                const textarea = document.getElementById('autoParseArea');
+                const text = textarea.value.trim();
+
+                if (!text) return;
+
+                // --- 1. タイトルとプロジェクト名の抽出 ---
+                const bracketTitleMatch = text.match(/【([^】]+)】/); // 【ご提出】等 → タイトル
+                const projectNameMatch = text.match(/「([^」]+)」/);  // 「○○○○」等 → プロジェクト名
+                const titleMatch = bracketTitleMatch || projectNameMatch; // テンプレート置換用（後方互換）
+
+                // --- 2. URLの抽出とスマート置換 ---
+                let lines = text.split('\n');
+                let ytUrls = [];
+                let mp4Url = '';
+                let promanageUrl = '';
+                let sheetUrl = '';
+                let usedTags = new Set();
+                let isTemplatePaste = text.includes('{') || text.includes('}') || text.includes('〇〇〇〇〇');
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    const h = line.toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+
+                    let tagToInsert = null;
+                    if (h.includes('youtube') || h.includes('youtu.be')) {
+                        tagToInsert = '{YouTube一覧}';
+                    } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || h.includes('ドライブ') || h.includes('drive')) {
+                        tagToInsert = '{MP4URL}';
+                    } else if (h.includes('プロマネ') || h.includes('マネ')) {
+                        tagToInsert = '{プロマネURL}';
+                    } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets')) {
+                        tagToInsert = '{スプレッドシートURL}';
+                    }
+
+                    const isHeader = tagToInsert && (line.startsWith('▼') || line.startsWith('■') || line.length < 35);
+
+                    if (isHeader) {
+                        if (!usedTags.has(tagToInsert)) {
+                            let nextLine = (i + 1 < lines.length) ? lines[i + 1].trim() : null;
+                            if (nextLine && nextLine.match(/^https?/i)) {
+                                const url = nextLine.split(/[ 　]/)[0];
+                                if (!nextLine.includes('{')) {
+                                    if (tagToInsert === '{YouTube一覧}') ytUrls.push({ url: url, header: line });
+                                    else if (tagToInsert === '{MP4URL}') mp4Url = url;
+                                    else if (tagToInsert === '{プロマネURL}') promanageUrl = url;
+                                    else if (tagToInsert === '{スプレッドシートURL}') sheetUrl = url;
+                                }
+                                lines[i + 1] = nextLine.replace(/^https?[^\s　]*/i, tagToInsert);
+                                usedTags.add(tagToInsert);
+                                i++;
+                            } else if (nextLine !== tagToInsert) {
+                                lines.splice(i + 1, 0, tagToInsert);
+                                usedTags.add(tagToInsert);
+                                i++;
+                            } else {
+                                usedTags.add(tagToInsert);
+                                i++;
+                            }
+                        }
+                    } else if (line.match(/^https?/i)) {
+                        let headerFallback = '';
+                        for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+                            if (lines[j].trim() !== '') {
+                                headerFallback = lines[j].toLowerCase();
+                                break;
+                            }
+                        }
+                        let hFall = headerFallback.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+                        let u = line.toLowerCase().split(/[ 　]/)[0];
+                        u = u.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+                        const url = line.split(/[ 　]/)[0];
+
+                        if (hFall.includes('youtube') || hFall.includes('youtu.be') || u.includes('youtube') || u.includes('youtu.be')) {
+                            if (!usedTags.has('{YouTube一覧}')) {
+                                if (!line.includes('{')) ytUrls.push({ url: url, header: headerFallback });
+                                lines[i] = line.replace(/^https?[^\s　]*/i, '{YouTube一覧}');
+                                usedTags.add('{YouTube一覧}');
+                            } else {
+                                lines[i] = '__DELETE_ME__';
+                            }
+                        } else if (hFall.includes('納品') || hFall.includes('mp4') || hFall.includes('ギガファイル') || hFall.includes('ドライブ') || hFall.includes('drive') || u.endsWith('.mp4')) {
+                            if (!line.includes('{')) mp4Url = url;
+                            lines[i] = line.replace(/^https?[^\s　]*/i, '{MP4URL}');
+                            usedTags.add('{MP4URL}');
+                        } else if (hFall.includes('プロマネ') || hFall.includes('マネ') || u.includes('promanage')) {
+                            if (!line.includes('{')) promanageUrl = url;
+                            lines[i] = line.replace(/^https?[^\s　]*/i, '{プロマネURL}');
+                            usedTags.add('{プロマネURL}');
+                        } else if (hFall.includes('スプレッドシート') || hFall.includes('シート') || hFall.includes('管理表') || hFall.includes('spreadsheets') || u.includes('docs.google.com') || u.includes('spreadsheet')) {
+                            if (!line.includes('{')) sheetUrl = url;
+                            lines[i] = line.replace(/^https?[^\s　]*/i, '{スプレッドシートURL}');
+                            usedTags.add('{スプレッドシートURL}');
+                        }
+                    }
+                }
+
+                let templateText = lines.filter(line => line !== '__DELETE_ME__').join('\n');
+
+                // 残った生URL（https://...）をテンプレートから削除する
+                templateText = templateText.replace(/^https?:\/\/[^\s　]*$/gm, '');
+
+                if (titleMatch && titleMatch[1]) {
+                    // もし 〇〇〇〇 のようなプレースホルダーであれば、一括で置換する
+                    if (titleMatch[1].includes('〇')) {
+                        templateText = templateText.replace(/【[^】]*〇[^】]*】/g, '【{プロジェクト名}】');
+
+                        // 「〇〇〇」の〇〇〇が完了いたしました -> 「{プロジェクト名}」の{作業種別}が完了いたしました
+                        templateText = templateText.replace(/「([^」]*〇[^」]*)」の([^が\n]+)が完了/g, (match, p1, p2) => {
+                            if (p2.includes('〇')) {
+                                return `「{プロジェクト名}」の{作業種別}が完了`;
+                            }
+                            return `「{プロジェクト名}」の${p2}が完了`;
+                        });
+
+                        templateText = templateText.replace(/「[^」]*〇[^」]*」/g, '「{プロジェクト名}」');
+
+                    } else {
+                        // 【ご提出】などの場合、本文中の「ご提出させていただきます」まで置換されないように、
+                        // まずは「【ご提出】」や「「ご提出」」といったカギ括弧ごと置換する
+                        const exactBracket1 = `【${titleMatch[1].trim()}】`;
+                        const exactBracket2 = `「${titleMatch[1].trim()}」`;
+                        if (templateText.includes(exactBracket1)) {
+                            templateText = templateText.replace(exactBracket1, '【{プロジェクト名}】');
+                        } else if (templateText.includes(exactBracket2)) {
+                            templateText = templateText.replace(exactBracket2, '「{プロジェクト名}」');
+                        } else {
+                            // もし括弧なしで見つかった場合は、最初の1回だけ置換する（全体置換だと事故るため）
+                            templateText = templateText.replace(titleMatch[1].trim(), '{プロジェクト名}');
+                        }
+                    }
+                }
+
+                // --- 3. UIへの反映 ---
+                if (!isTemplatePaste) {
+                    // プロジェクト名は自動入力しない（ユーザーが手動で入力する）
+                    if (ytUrls.length > 0) {
+                        const existingEmpty = document.querySelector('.youtube-entry .yt-url');
+                        if (existingEmpty && existingEmpty.value.trim() === '') {
+                            existingEmpty.value = ytUrls[0].url;
+                            updateViewButton(existingEmpty.closest('.youtube-entry').id.replace('yt-entry-', ''));
+                            for (let i = 1; i < ytUrls.length; i++) {
+                                addYoutubeEntry(ytUrls[i].url, '', '');
+                            }
+                        } else {
+                            ytUrls.forEach(yt => addYoutubeEntry(yt.url, '', ''));
+                        }
+                    }
+                    if (mp4Url) {
+                        document.getElementById('mp4Url').value = mp4Url;
+                        updateOtherViewButton('mp4Url');
+                    }
+                    if (promanageUrl) {
+                        document.getElementById('promanageUrl').value = promanageUrl;
+                        updateOtherViewButton('promanageUrl');
+                    }
+                    if (sheetUrl) {
+                        document.getElementById('spreadsheetUrl').value = sheetUrl;
+                        updateOtherViewButton('spreadsheetUrl');
+                    }
+                }
+
+                // 必須変数が含まれているかチェック
+                const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+                let missingVars = [];
+                for (const v of requiredVars) {
+                    if (!templateText.includes(v)) {
+                        missingVars.push(v);
+                    }
+                }
+                if (missingVars.length > 0) {
+                    templateText = templateText.trimEnd() + '\n\n' + missingVars.join('\n');
+                }
+
+                // Create new template
+                const now = new Date();
+                const newName = `自動生成テンプレート (${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')})`;
+                const newId = 'template_' + Date.now();
+                customTemplates[newId] = {
+                    name: newName,
+                    content: templateText
+                };
+                localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                renderTemplateSelect();
+
+                const select = document.getElementById('templateSelect');
+                select.value = newId;
+                onTemplateChange();
+
+                // UI上の textarea をクリア
+                document.getElementById('autoParseArea').value = '';
+
+                // Scroll to template select
+                select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Scroll to template select
+                select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // 以前はここでYouTube枠の上書きを行っていましたが、
+                // ユーザーの入力内容を保持するため自動反映を廃止しました。
+
+                // プレビューの更新
+                updatePreview();
+
+                // ペースト後に自動でアコーディオンを閉じる
+                const parseContent = document.getElementById('autoParseContent');
+                const parseArrow = document.getElementById('autoParseContentArrow');
+                if (parseContent && !parseContent.classList.contains('hidden')) {
+                    parseContent.classList.add('hidden');
+                    if (parseArrow) parseArrow.classList.add('collapsed');
+                }
+
+                // 成功した旨を表示し、入力欄をクリア
+                textarea.value = '';
+                showToastMessage('✨ メッセージから情報を自動抽出しました！', 'success');
+
+            }, 50);
+        }
+
+        function handleTemplatePaste(event) {
+            // デフォルトのペースト動作をキャンセル
+            event.preventDefault();
+
+            // ペーストされたテキストを取得
+            const paste = (event.clipboardData || window.clipboardData).getData('text');
+
+            // --- スマート置換ロジック ---
+            let smartPaste = paste;
+
+            // 1. プロジェクト名と作業種別の置換
+            smartPaste = smartPaste.replace(/【[^】]*〇[^】]*】/g, '【{プロジェクト名}】');
+
+            // 「〇〇〇」の〇〇〇が完了いたしました -> 「{プロジェクト名}」の{作業種別}が完了いたしました
+            smartPaste = smartPaste.replace(/「([^」]*〇[^」]*)」の([^が\n]+)が完了/g, (match, p1, p2) => {
+                if (p2.includes('〇')) {
+                    return `「{プロジェクト名}」の{作業種別}が完了`;
+                }
+                return `「{プロジェクト名}」の${p2}が完了`;
+            });
+
+            // 〇 が見つからなくても、単純な「」の中身が空白や記号だけなら置換
+            smartPaste = smartPaste.replace(/「(\s*|_+|\.+|・+)」/g, '「{プロジェクト名}」');
+            smartPaste = smartPaste.replace(/【(\s*|_+|\.+|・+)】/g, '【{プロジェクト名}】');
+
+            // --- 括弧で囲まれたタイトル名（【ご提出】など）の賢い置換 ---
+            const titleMatch = smartPaste.match(/【([^】]+)】/) || smartPaste.match(/「([^」]+)」/);
+            if (titleMatch && titleMatch[1] && !titleMatch[1].includes('〇')) {
+                const exactBracket1 = `【${titleMatch[1].trim()}】`;
+                const exactBracket2 = `「${titleMatch[1].trim()}」`;
+                if (smartPaste.includes(exactBracket1)) {
+                    smartPaste = smartPaste.replace(exactBracket1, '【{プロジェクト名}】');
+                } else if (smartPaste.includes(exactBracket2)) {
+                    smartPaste = smartPaste.replace(exactBracket2, '「{プロジェクト名}」');
+                } else {
+                    smartPaste = smartPaste.replace(titleMatch[1].trim(), '{プロジェクト名}');
+                }
+            }
+
+            // 2. URLの置換
+            let lines = smartPaste.split('\n');
+            let usedTags = new Set();
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // HTTP(S)から始まる行が見つかったら、直前のラベルを見て置換
+                if (line.match(/^https?/i)) {
+                    let header = '';
+                    for (let j = i - 1; j >= Math.max(0, i - 3); j--) { // 直近3行程度から探す
+                        if (lines[j].trim() !== '') {
+                            header = lines[j].toLowerCase();
+                            break;
+                        }
+                    }
+
+                    let h = header;
+                    let u = line.toLowerCase().split(/[ 　]/)[0];
+                    h = h.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+                    u = u.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+
+                    if (h.includes('youtube') || h.includes('youtu.be') || u.includes('youtube') || u.includes('youtu.be')) {
+                        if (!usedTags.has('{YouTube一覧}')) {
+                            lines[i] = line.replace(/^https?[^\s　]*/i, '{YouTube一覧}');
+                            usedTags.add('{YouTube一覧}');
+                        } else {
+                            lines[i] = '__DELETE_ME__'; // 重複するYouTubeURL行は消す
+                        }
+                    } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || h.includes('ドライブ') || h.includes('drive') || u.endsWith('.mp4')) {
+                        lines[i] = line.replace(/^https?[^\s　]*/i, '{MP4URL}');
+                        usedTags.add('{MP4URL}');
+                    } else if (h.includes('プロマネ') || h.includes('マネ') || u.includes('promanage')) {
+                        lines[i] = line.replace(/^https?[^\s　]*/i, '{プロマネURL}');
+                        usedTags.add('{プロマネURL}');
+                    } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets') || u.includes('docs.google.com') || u.includes('spreadsheet')) {
+                        lines[i] = line.replace(/^https?[^\s　]*/i, '{スプレッドシートURL}');
+                        usedTags.add('{スプレッドシートURL}');
+                    }
+                }
+            }
+            smartPaste = lines.filter(line => line !== '__DELETE_ME__').join('\n');
+
+            // 現在のテキストエリアの情報を取得
+            const editor = document.getElementById('templateEditor');
+            const selectionStart = editor.selectionStart;
+            const selectionEnd = editor.selectionEnd;
+            const currentText = editor.value;
+
+            // ペースト後のテキストを構築
+            let newText = currentText.substring(0, selectionStart) + smartPaste + currentText.substring(selectionEnd);
+
+            // 必須変数が含まれているかチェック
+            const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+            let missingVars = [];
+            for (const v of requiredVars) {
+                if (!newText.includes(v)) {
+                    missingVars.push(v);
+                }
+            }
+
+            // 不足している変数があれば末尾に追加
+            if (missingVars.length > 0) {
+                newText = newText.trimEnd() + '\n\n' + missingVars.join('\n');
+            }
+
+            // テキストエリアを更新
+            editor.value = newText;
+
+            // カーソル位置をペーストしたテキストの直後に移動
+            const newCursorPos = selectionStart + smartPaste.length;
+            editor.setSelectionRange(newCursorPos, newCursorPos);
+
+            saveTemplate();
+            updatePreview();
+        }
+        function resetTemplate() {
+            const select = document.getElementById('templateSelect');
+            const currentType = select ? select.value : 'template1';
+
+            // 現在のテンプレート枠のキャッシュを削除
+            localStorage.removeItem(`urlSubmitTemplate_${currentType}`);
+
+            const editor = document.getElementById('templateEditor');
+            editor.value = TEMPLATES[currentType] || DEFAULT_TEMPLATE;
+
+            saveTemplate();
+            updatePreview();
+        }
+
+        function clearInputs() {
+            // プロジェクト名をクリア
+            document.getElementById('projectName').value = '';
+
+            // YouTube URLをクリア
+            const ytUrls = document.querySelectorAll('.youtube-entry .yt-url');
+            ytUrls.forEach(input => input.value = '');
+
+            // その他のURLをクリア
+            document.getElementById('promanageUrl').value = '';
+            document.getElementById('mp4Url').value = '';
+            document.getElementById('spreadsheetUrl').value = '';
+
+            // その他URL確認ボタンを無効化
+            updateOtherViewButton('mp4Url');
+            updateOtherViewButton('promanageUrl');
+            updateOtherViewButton('spreadsheetUrl');
+
+            updatePreview();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function onWorkTypeChange() {
+            const select = document.getElementById('workType');
+            const customInput = document.getElementById('workTypeCustom');
+            if (select.value === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+            }
+            updatePreview();
+        }
+
+        function toggleHint() {
+            const hint = document.getElementById('templateHint');
+            hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updatePreview() {
+            updateYouTubeTitles();
+            const projectName = document.getElementById('projectName').value.trim();
+
+            const titleSelect = document.getElementById('titleType');
+            const titleCustom = document.getElementById('titleTypeCustom');
+            const titleVal = titleSelect.value === 'custom' ? titleCustom.value.trim() : titleSelect.value;
+
+            const workTypeSelect = document.getElementById('workType');
+            const workTypeCustom = document.getElementById('workTypeCustom');
+            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+            const promanageUrl = document.getElementById('promanageUrl').value.trim();
+            const mp4Url = document.getElementById('mp4Url').value.trim();
+            const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
+            const youtubeUrls = getYoutubeEntries();
+
+            // Build project title part
+            let titlePart = projectName || '';
+
+            // Build YouTube section
+            let ytSection = '';
+            if (youtubeUrls.length > 0) {
+                youtubeUrls.forEach(entry => {
+                    ytSection += (entry.url || 'URL未設定');
+
+                    // Add double newline unless it's the last element
+                    if (entry !== youtubeUrls[youtubeUrls.length - 1]) {
+                        const addSpace = document.getElementById('spaceToggle') ? document.getElementById('spaceToggle').checked : true;
+                        ytSection += addSpace ? '\n\n' : '\n';
+                    }
+                });
+                ytSection = ytSection.trimEnd();
+            }
+
+            const addSpace = document.getElementById('spaceToggle') ? document.getElementById('spaceToggle').checked : true;
+
+            // Apply template
+            let template = document.getElementById('templateEditor').value;
+
+            // If "URLの間に空白行を空ける" is unchecked, remove the empty lines between URL blocks in the template
+            if (!addSpace) {
+                template = template.replace(/(\{(YouTube一覧|MP4URL|プロマネURL|スプレッドシートURL)\})\n+\s*(▼|■|【)/g, '$1\n$3');
+            }
+
+            let message = template
+                .replace(/\{タイトル\}/g, titleVal || '')
+                .replace(/\{プロジェクト名\}/g, titlePart || '')
+                .replace(/\{作業種別\}/g, workType);
+
+            // If the URL exists, replace the tag.
+            // If not, remove the tag AND the single line immediately preceding it (assuming it's a header like ▼MP4).
+            const replaceOrRemove = (msg, tagRaw, val) => {
+                const tag = '\{' + tagRaw + '\}';
+                if (val) {
+                    return msg.replace(new RegExp(tag, 'g'), val);
+                } else {
+                    return msg.replace(new RegExp(`(?:^|\n)[^\n]*\n[^\n]*?${tag}[^\n]*(?=\n|$)`, 'g'), '');
+                }
+            };
+
+            message = replaceOrRemove(message, 'YouTube一覧', ytSection);
+            message = replaceOrRemove(message, 'MP4URL', mp4Url);
+            message = replaceOrRemove(message, 'プロマネURL', promanageUrl);
+            message = replaceOrRemove(message, 'スプレッドシートURL', spreadsheetUrl);
+
+            // Clean up excessive blank lines (more than 2 consecutive)
+            message = message.replace(/\n{3,}/g, '\n\n');
+            message = message.trim();
+            document.getElementById('preview').textContent = message;
+
+            // Save template on change
+            saveTemplate();
+        }
+
+        async function copyToClipboard() {
+            const preview = document.getElementById('preview');
+            const text = preview.textContent;
+            const btn = document.getElementById('copyBtn');
+
+            try {
+                await navigator.clipboard.writeText(text);
+                btn.classList.add('copied');
+                btn.innerHTML = '✅ コピーしました！';
+
+                // Show toast
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2500);
+
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '📋 クリップボードにコピー';
+                }, 2000);
+            } catch (err) {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                btn.classList.add('copied');
+                btn.innerHTML = '✅ コピーしました！';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '📋 クリップボードにコピー';
+                }, 2000);
+            }
+        }
+
+        // Add slide-out animation
+        const style = document.createElement('style');
+        style.textContent = `
+      @keyframes slideOut {
+        from { opacity: 1; transform: translateY(0); height: auto; }
+        to { opacity: 0; transform: translateY(-10px); height: 0; overflow: hidden; }
+      }
+    `;
+        document.head.appendChild(style);
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const arrow = document.getElementById(sectionId + 'Arrow');
+            content.classList.toggle('hidden');
+            arrow.classList.toggle('collapsed');
+        }
+
+        // URLパラメータから自動入力
+        function loadFromUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.toString() === '') return;
+
+            // プロジェクト名
+            const project = params.get('project');
+            if (project) {
+                document.getElementById('projectName').value = decodeURIComponent(project);
+            }
+
+            // 作業種別
+            const worktype = params.get('worktype');
+            if (worktype) {
+                const select = document.getElementById('workType');
+                const matchOption = Array.from(select.options).find(o => o.value === worktype);
+                if (matchOption) {
+                    select.value = worktype;
+                } else {
+                    select.value = 'custom';
+                    document.getElementById('workTypeCustom').style.display = 'block';
+                    document.getElementById('workTypeCustom').value = decodeURIComponent(worktype);
+                }
+            }
+
+            // YouTube URL（youtube, youtube2, youtube3, ... に対応）
+            const youtubeUrls = [];
+            const youtubeNotes = [];
+            const youtubeTitles = [];
+            // まず youtube パラメータ
+            if (params.get('youtube')) {
+                youtubeUrls.push(decodeURIComponent(params.get('youtube')));
+                youtubeNotes.push(params.get('youtube_note') ? decodeURIComponent(params.get('youtube_note')) : '');
+                youtubeTitles.push(params.get('youtube_title') ? decodeURIComponent(params.get('youtube_title')) : '');
+            }
+            // youtube2, youtube3, ... を順番にチェック
+            for (let i = 2; i <= 20; i++) {
+                const url = params.get(`youtube${i}`);
+                if (url) {
+                    youtubeUrls.push(decodeURIComponent(url));
+                    const note = params.get(`youtube${i}_note`);
+                    youtubeNotes.push(note ? decodeURIComponent(note) : '');
+                    const title = params.get(`youtube${i}_title`);
+                    youtubeTitles.push(title ? decodeURIComponent(title) : '');
+                }
+            }
+
+            // MP4 URL
+            const mp4 = params.get('mp4');
+            if (mp4) {
+                document.getElementById('mp4Url').value = decodeURIComponent(mp4);
+                updateOtherViewButton('mp4Url');
+            }
+
+            // プロマネ URL
+            const promanage = params.get('promanage');
+            if (promanage) {
+                document.getElementById('promanageUrl').value = decodeURIComponent(promanage);
+                updateOtherViewButton('promanageUrl');
+            }
+
+            // スプレッドシート URL
+            const spreadsheet = params.get('spreadsheet');
+            if (spreadsheet) {
+                document.getElementById('spreadsheetUrl').value = decodeURIComponent(spreadsheet);
+                updateOtherViewButton('spreadsheetUrl');
+            }
+
+            return { youtubeUrls, youtubeNotes, youtubeTitles };
+        }
+
+        // Initialize template
+        initTemplate();
+
+        // URLパラメータを読み取り
+        const urlParamData = loadFromUrlParams();
+
+        // Initialize YouTube entries
+        if (urlParamData && urlParamData.youtubeUrls.length > 0) {
+            urlParamData.youtubeUrls.forEach((url, i) => {
+                addYoutubeEntry(url, urlParamData.youtubeNotes[i] || '', urlParamData.youtubeTitles[i] || '');
+            });
+        } else {
+            addYoutubeEntry('', '', '');
+        }
+
+        // Initial preview
+        updatePreview();
+
+        // --- GAS連携設定 ---
+        function initGasUrl() {
+            const saved = localStorage.getItem('gasWebAppUrl');
+            if (saved) {
+                document.getElementById('gasUrl').value = saved;
+            }
+        }
+
+        function saveGasUrl() {
+            const url = document.getElementById('gasUrl').value.trim();
+            localStorage.setItem('gasWebAppUrl', url);
+        }
+
+        // --- スプレッドシートへの送信 ---
+        async function submitToSpreadsheet() {
+            const gasUrl = document.getElementById('gasUrl').value.trim();
+            if (!gasUrl) {
+                showToastMessage('⚠️ GAS WebアプリURLが設定されていません', 'warning');
+                // GAS設定セクションを開く
+                const content = document.getElementById('gasSettings');
+                const arrow = document.getElementById('gasSettingsArrow');
+                if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    arrow.classList.remove('collapsed');
+                }
+                document.getElementById('gasUrl').focus();
+                return;
+            }
+
+            const projectName = document.getElementById('projectName').value.trim();
+            if (!projectName) {
+                showToastMessage('⚠️ プロジェクト名を入力してください', 'warning');
+                document.getElementById('projectName').focus();
+                return;
+            }
+
+            // YouTube URLを収集
+            const youtubeEntries = getYoutubeEntries();
+            const youtubeUrls = youtubeEntries.map(e => e.url).filter(u => u);
+
+            // その他URL
+            const mp4Url = document.getElementById('mp4Url').value.trim();
+            const promanageUrl = document.getElementById('promanageUrl').value.trim();
+
+            // 作業種別
+            const workTypeSelect = document.getElementById('workType');
+            const workTypeCustom = document.getElementById('workTypeCustom');
+            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+
+            // ボタンを送信中状態に
+            const btn = document.getElementById('submitSheetBtn');
+            const btnText = document.getElementById('submitSheetBtnText');
+            btn.classList.add('sending');
+            btnText.textContent = '送信中...';
+
+            try {
+                const payload = {
+                    projectName,
+                    youtubeUrls,
+                    mp4Url,
+                    promanageUrl,
+                    workType
+                };
+
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.classList.remove('sending');
+                    btn.classList.add('sent-ok');
+                    const statusMsg = result.previousStatus !== result.newStatus
+                        ? ` (ステータス: ${result.previousStatus} → ${result.newStatus})`
+                        : '';
+                    btnText.textContent = `✅ ${result.message}${statusMsg}`;
+                    showToastMessage(`✅ ${result.message}`, 'success');
+
+                    setTimeout(() => {
+                        btn.classList.remove('sent-ok');
+                        btnText.textContent = '📊 スプレッドシートに自動入力';
+                    }, 4000);
+                } else {
+                    btn.classList.remove('sending');
+                    btn.classList.add('sent-err');
+                    btnText.textContent = `❌ ${result.error}`;
+                    showToastMessage(`❌ ${result.error}`, 'error');
+
+                    setTimeout(() => {
+                        btn.classList.remove('sent-err');
+                        btnText.textContent = '📊 スプレッドシートに自動入力';
+                    }, 4000);
+                }
+            } catch (error) {
+                btn.classList.remove('sending');
+                btn.classList.add('sent-err');
+                btnText.textContent = `❌ 通信エラー: ${error.message}`;
+                showToastMessage(`❌ 通信エラーが発生しました`, 'error');
+
+                setTimeout(() => {
+                    btn.classList.remove('sent-err');
+                    btnText.textContent = '📊 スプレッドシートに自動入力';
+                }, 4000);
+            }
+        }
+
+        function showToastMessage(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            if (type === 'warning' || type === 'error') {
+                toast.style.background = 'rgba(220, 38, 38, 0.12)';
+                toast.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+                toast.style.color = '#dc2626';
+            } else {
+                toast.style.background = 'rgba(46, 158, 106, 0.12)';
+                toast.style.borderColor = 'rgba(46, 158, 106, 0.3)';
+                toast.style.color = 'var(--success)';
+            }
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // GAS URL初期化
+        initGasUrl();
+
+        // ===== YouTube Monitor 機能 =====
+        const monitoringEntries = new Set();
+
+        function extractVideoId(url) {
+            if (!url) return null;
+            const patterns = [
+                /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                /(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})/,
+                /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+                /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+            ];
+            for (const p of patterns) {
+                const m = url.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+
+        function updateStatusDisplay(id, status) {
+            const statusEl = document.getElementById(`yt-status-${id}`);
+            const monitorBtn = document.getElementById(`btn-monitor-${id}`);
+            if (!statusEl) return;
+
+            if (status.error) {
+                statusEl.innerHTML = `<span class="status-badge failed">${status.error}</span>`;
+                if (monitorBtn) {
+                    monitorBtn.classList.remove('monitoring');
+                    monitorBtn.classList.add('failed');
+                    monitorBtn.textContent = '❌ エラー';
+                }
+                monitoringEntries.delete(id);
+                return;
+            }
+
+            if (status.isReady) {
+                statusEl.innerHTML = `<span class="status-badge ready">✅ 視聴可能</span>`;
+                if (monitorBtn) {
+                    monitorBtn.classList.remove('monitoring');
+                    monitorBtn.classList.add('ready');
+                    monitorBtn.textContent = '✅ 完了';
+                }
+                monitoringEntries.delete(id);
+                showToastMessage(`✅ 動画の処理が完了しました！`, 'success');
+                return;
+            }
+
+            if (status.isFailed) {
+                statusEl.innerHTML = `<span class="status-badge failed">❌ 処理失敗</span>`;
+                if (monitorBtn) {
+                    monitorBtn.classList.remove('monitoring');
+                    monitorBtn.classList.add('failed');
+                    monitorBtn.textContent = '❌ 失敗';
+                }
+                monitoringEntries.delete(id);
+                showToastMessage(`❌ 動画の処理に失敗しました`, 'error');
+                return;
+            }
+
+            // 処理中
+            const processingText = status.processingStatus === 'processing' ? '処理中' :
+                                   status.processingStatus === 'terminated' ? '中断' : status.processingStatus;
+            statusEl.innerHTML = `<span class="status-badge processing">⏳ ${processingText}</span>`;
+        }
+
+        async function toggleMonitor(id) {
+            const entry = document.getElementById(`yt-entry-${id}`);
+            if (!entry) return;
+            const urlInput = entry.querySelector('.yt-url');
+            const url = urlInput ? urlInput.value.trim() : '';
+            const videoId = extractVideoId(url);
+            const monitorBtn = document.getElementById(`btn-monitor-${id}`);
+
+            if (!window.youtubeMonitor) {
+                return;
+            }
+
+            if (!videoId) {
+                showToastMessage('⚠️ 有効なYouTube URLを入力してください', 'warning');
+                return;
+            }
+
+            // 監視中なら停止
+            if (monitoringEntries.has(id)) {
+                await window.youtubeMonitor.stopMonitor(videoId);
+                monitoringEntries.delete(id);
+                if (monitorBtn) {
+                    monitorBtn.classList.remove('monitoring');
+                    monitorBtn.textContent = '🔍 状況';
+                }
+                return;
+            }
+
+            // 監視開始（まず1回チェック）
+            if (monitorBtn) {
+                monitorBtn.classList.add('monitoring');
+                monitorBtn.textContent = '⏳ 監視中...';
+            }
+            monitoringEntries.add(id);
+
+            // videoId → entryId のマッピングを保存
+            if (!window._videoIdToEntryId) window._videoIdToEntryId = {};
+            window._videoIdToEntryId[videoId] = id;
+
+            await window.youtubeMonitor.startMonitor(videoId);
+        }
+
+        // 監視更新を受信
+        if (window.youtubeMonitor) {
+            window.youtubeMonitor.onMonitorUpdate((status) => {
+                const entryId = window._videoIdToEntryId && window._videoIdToEntryId[status.videoId];
+                if (entryId !== undefined) {
+                    updateStatusDisplay(entryId, status);
+                }
+            });
+        }
+
+    </script>
+</body>
+
+</html>
