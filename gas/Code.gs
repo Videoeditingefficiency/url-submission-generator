@@ -35,8 +35,10 @@ function doGet(e) {
 
 /**
  * POSTリクエスト処理
- * 
+ *
  * リクエストボディ (JSON):
+ *
+ * ■ スプレッドシート更新:
  * {
  *   "projectName": "プロジェクト名（タイトルで検索）",
  *   "youtubeUrls": ["url1", "url2", ...],
@@ -44,12 +46,28 @@ function doGet(e) {
  *   "promanageUrl": "プロマネのURL",
  *   "workType": "修正" | "制作" | "初稿" | ...
  * }
+ *
+ * ■ 使用ログ記録:
+ * {
+ *   "action": "log",
+ *   "event": "page_view" | "copy_message",
+ *   "userAgent": "..."
+ * }
  */
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // ログ記録リクエストの場合
+    if (data.action === 'log') {
+      const result = recordUsageLog(data);
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const result = updateSpreadsheet(data);
-    
+
     return ContentService
       .createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
@@ -150,4 +168,39 @@ function updateSpreadsheet(data) {
     previousStatus: currentStatus,
     newStatus: newStatus || currentStatus
   };
+}
+
+// ==================================================
+// 使用ログ記録
+// ==================================================
+const LOG_SHEET_NAME = '使用ログ';
+
+/**
+ * 使用ログを「使用ログ」シートに記録する
+ * シートが存在しない場合は自動作成
+ */
+function recordUsageLog(data) {
+  const { event, userAgent } = data;
+
+  if (!event) {
+    return { success: false, error: 'イベント種別が指定されていません' };
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+
+  // シートがなければ作成してヘッダーを追加
+  if (!logSheet) {
+    logSheet = ss.insertSheet(LOG_SHEET_NAME);
+    logSheet.appendRow(['日時', 'イベント', 'UserAgent']);
+    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+    logSheet.setColumnWidth(1, 180);
+    logSheet.setColumnWidth(2, 150);
+    logSheet.setColumnWidth(3, 400);
+  }
+
+  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd HH:mm:ss');
+  logSheet.appendRow([now, event, userAgent || '']);
+
+  return { success: true, message: 'ログを記録しました' };
 }
