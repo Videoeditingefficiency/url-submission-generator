@@ -9,7 +9,7 @@ const DATA_START_ROW = 5;
 
 // 列インデックス (0-based)
 const COL = {
-  KIGAKU_NO: 0,   // A列: 企画No
+  KIGAKU_NO: 0,    // A列: 企画No
   TITLE: 1,        // B列: タイトル
   STATUS: 3,       // D列: ステータス
   YOUTUBE_URL: 10, // K列: YouTube 限定公開URL
@@ -24,8 +24,12 @@ const STATUS_MAP = {
   '修正': '修正提出'
 };
 
+// ==================================================
+// Web App エンドポイント
+// ==================================================
+
 /**
- * CORSプリフライト対応
+ * CORSプリフライト対応 / 動作確認用
  */
 function doGet(e) {
   return ContentService
@@ -50,8 +54,12 @@ function doGet(e) {
  * ■ 使用ログ記録:
  * {
  *   "action": "log",
- *   "event": "page_view" | "copy_message",
- *   "userAgent": "..."
+ *   "event": "page_view" | "copy_message" | ...,
+ *   "user": "Yutaro",
+ *   "input": "https://youtu.be/xxxx",
+ *   "result": "success" | "error",
+ *   "userAgent": "...",
+ *   "note": "任意メモ"
  * }
  */
 function doPost(e) {
@@ -66,6 +74,7 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 通常のスプレッドシート更新
     const result = updateSpreadsheet(data);
 
     return ContentService
@@ -81,52 +90,64 @@ function doPost(e) {
   }
 }
 
+// ==================================================
+// 進捗管理シート更新
+// ==================================================
+
 /**
  * スプレッドシートを更新する
  */
 function updateSpreadsheet(data) {
   const { projectName, youtubeUrls, mp4Url, promanageUrl, workType } = data;
-  
+
   if (!projectName) {
     return { success: false, error: 'プロジェクト名が指定されていません' };
   }
-  
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAME);
-  
+
   if (!sheet) {
     return { success: false, error: `「${SHEET_NAME}」シートが見つかりません` };
   }
-  
+
   // データ範囲を取得
   const lastRow = sheet.getLastRow();
   if (lastRow < DATA_START_ROW) {
     return { success: false, error: 'データが存在しません' };
   }
-  
-  const dataRange = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, sheet.getLastColumn());
+
+  const dataRange = sheet.getRange(
+    DATA_START_ROW,
+    1,
+    lastRow - DATA_START_ROW + 1,
+    sheet.getLastColumn()
+  );
   const values = dataRange.getValues();
-  
+
   // タイトル（B列）で部分一致検索
   let matchedRowIndex = -1;
   for (let i = 0; i < values.length; i++) {
     const title = String(values[i][COL.TITLE]).trim();
-    if (title && projectName.includes(title) || title.includes(projectName)) {
+    if (!title) continue;
+
+    // 「projectName が title を含む」または「title が projectName を含む」
+    if (projectName.includes(title) || title.includes(projectName)) {
       matchedRowIndex = i;
       break;
     }
   }
-  
+
   if (matchedRowIndex === -1) {
-    return { 
-      success: false, 
-      error: `「${projectName}」に一致するプロジェクトが見つかりません` 
+    return {
+      success: false,
+      error: `「${projectName}」に一致するプロジェクトが見つかりません`
     };
   }
-  
+
   const actualRow = DATA_START_ROW + matchedRowIndex;
   const matchedTitle = values[matchedRowIndex][COL.TITLE];
-  
+
   // YouTube URL を書き込み（改行区切りで複数対応）
   if (youtubeUrls && youtubeUrls.length > 0) {
     const ytUrlText = youtubeUrls.filter(u => u).join('\n');
@@ -134,32 +155,32 @@ function updateSpreadsheet(data) {
       sheet.getRange(actualRow, COL.YOUTUBE_URL + 1).setValue(ytUrlText);
     }
   }
-  
+
   // MP4 URL を書き込み
   if (mp4Url) {
     sheet.getRange(actualRow, COL.MP4_URL + 1).setValue(mp4Url);
   }
-  
+
   // プロマネ URL を書き込み
   if (promanageUrl) {
     sheet.getRange(actualRow, COL.PROMANAGE_URL + 1).setValue(promanageUrl);
   }
-  
+
   // ステータスの更新
   const currentStatus = String(values[matchedRowIndex][COL.STATUS]).trim();
   let newStatus = null;
-  
+
   // 作業種別またはスプレッドシート上の現在のステータスに基づいて判定
   if (workType && STATUS_MAP[workType]) {
     newStatus = STATUS_MAP[workType];
   } else if (STATUS_MAP[currentStatus]) {
     newStatus = STATUS_MAP[currentStatus];
   }
-  
+
   if (newStatus) {
     sheet.getRange(actualRow, COL.STATUS + 1).setValue(newStatus);
   }
-  
+
   return {
     success: true,
     message: `「${matchedTitle}」（${actualRow}行目）を更新しました`,
@@ -173,14 +194,24 @@ function updateSpreadsheet(data) {
 // ==================================================
 // 使用ログ記録
 // ==================================================
+
 const LOG_SHEET_NAME = '使用ログ';
 
 /**
  * 使用ログを「使用ログ」シートに記録する
  * シートが存在しない場合は自動作成
+ *
+ * data: {
+ *   event: "page_view" | "copy_message" | ...,
+ *   user: "ユーザー名",
+ *   input: "入力値",
+ *   result: "success" | "error",
+ *   userAgent: "...",
+ *   note: "任意メモ"
+ * }
  */
 function recordUsageLog(data) {
-  const { event, userAgent } = data;
+  const { event, user, input, result, userAgent, note } = data;
 
   if (!event) {
     return { success: false, error: 'イベント種別が指定されていません' };
@@ -192,15 +223,23 @@ function recordUsageLog(data) {
   // シートがなければ作成してヘッダーを追加
   if (!logSheet) {
     logSheet = ss.insertSheet(LOG_SHEET_NAME);
-    logSheet.appendRow(['日時', 'イベント', 'UserAgent']);
-    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+    logSheet.appendRow(['日時', 'イベント', 'ユーザー', '入力', '結果', 'UserAgent', 'メモ']);
+    logSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
     logSheet.setColumnWidth(1, 180);
-    logSheet.setColumnWidth(2, 150);
-    logSheet.setColumnWidth(3, 400);
+    logSheet.setColumnWidth(2, 120);
+    logSheet.setColumnWidth(3, 150);
+    logSheet.setColumnWidth(4, 250);
+    logSheet.setColumnWidth(5, 100);
+    logSheet.setColumnWidth(6, 300);
+    logSheet.setColumnWidth(7, 250);
   }
 
-  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy/MM/dd HH:mm:ss');
-  logSheet.appendRow([now, event, userAgent || '']);
+  const now = Utilities.formatDate(
+    new Date(),
+    Session.getScriptTimeZone(),
+    'yyyy/MM/dd HH:mm:ss'
+  );
+  logSheet.appendRow([now, event, user || '', input || '', result || '', userAgent || '', note || '']);
 
   return { success: true, message: 'ログを記録しました' };
 }
