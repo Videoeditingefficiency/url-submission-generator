@@ -2537,17 +2537,12 @@
         // --- 使用ログ送信 ---
         const LOG_GAS_URL = 'https://script.google.com/macros/s/AKfycbxQRXuQ8WLL9Xge7_zVyuLlCFI6Qs8dUs8ImvgP-ba2fLf5xY4YqgHRoSAgfSSuiTo4/exec';
         function sendUsageLog(event) {
-            const gasUrl = LOG_GAS_URL;
-            const payload = {
+            const params = new URLSearchParams({
                 action: 'log',
                 event: event,
                 userAgent: navigator.userAgent
-            };
-            fetch(gasUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            }).catch(() => {});
+            });
+            fetch(LOG_GAS_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' }).catch(() => {});
         }
 
         // ページ読み込み時にログ送信

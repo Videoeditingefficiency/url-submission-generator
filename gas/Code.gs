@@ -24,6 +24,9 @@ const STATUS_MAP = {
   '修正': '修正提出'
 };
 
+// スプレッドシートID
+const SPREADSHEET_ID = '11Ra6GOEjzvll5TG8OEtxIvvZq4apvmHy1ZtbMtFrWJ4';
+
 // ==================================================
 // Web App エンドポイント
 // ==================================================
@@ -32,6 +35,21 @@ const STATUS_MAP = {
  * CORSプリフライト対応 / 動作確認用
  */
 function doGet(e) {
+  // ログ記録リクエスト: ?action=log&event=page_view
+  if (e && e.parameter && e.parameter.action === 'log') {
+    const result = recordUsageLog({
+      event: e.parameter.event || '',
+      user: e.parameter.user || '',
+      input: e.parameter.input || '',
+      result: e.parameter.result || '',
+      userAgent: e.parameter.userAgent || '',
+      note: e.parameter.note || ''
+    });
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   return ContentService
     .createTextOutput(JSON.stringify({ status: 'ok', message: 'GAS Web App is running' }))
     .setMimeType(ContentService.MimeType.JSON);
@@ -104,7 +122,7 @@ function updateSpreadsheet(data) {
     return { success: false, error: 'プロジェクト名が指定されていません' };
   }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
@@ -217,7 +235,7 @@ function recordUsageLog(data) {
     return { success: false, error: 'イベント種別が指定されていません' };
   }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let logSheet = ss.getSheetByName(LOG_SHEET_NAME);
 
   // シートがなければ作成してヘッダーを追加
