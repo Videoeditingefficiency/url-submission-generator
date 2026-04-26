@@ -1008,16 +1008,14 @@
                 <input type="text" id="projectName" placeholder="例: 担当している動画の名前" oninput="updatePreview()">
             </div>
             <div class="form-group">
-                <label for="workType">作業種別</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <select id="workType" onchange="onWorkTypeChange()" style="flex: 1;">
-                    </select>
-                    <button class="btn-secondary" onclick="addWorkType()" title="新しく追加">➕</button>
-                    <button class="btn-secondary" onclick="renameWorkType()" title="名前を変更">✏️</button>
-                    <button class="btn-secondary" onclick="deleteWorkType()" title="削除">🗑️</button>
+                <label>作業種別</label>
+                <div id="workTypeCheckboxes" style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
                 </div>
                 <input type="text" id="workTypeCustom" placeholder="作業内容を入力" style="display:none; margin-top:8px;"
                     oninput="updatePreview()">
+                <div style="margin-top: 8px;">
+                    <button class="btn-secondary" onclick="addWorkType()" title="新しく追加">➕ 追加</button>
+                </div>
             </div>
         </div>
 
@@ -1657,7 +1655,7 @@
         }
 
         // --- 作業種別 カスタマイズ機能 ---
-        let customWorkTypes = ['修正', '制作'];
+        let customWorkTypes = ['制作', '修正', '初稿提出', '修正稿提出'];
 
         function loadWorkTypes() {
             const saved = localStorage.getItem('urlSubmitWorkTypesData');
@@ -1668,36 +1666,102 @@
                     console.error('Failed to parse work types', e);
                 }
             }
-            renderWorkTypeSelect();
+            renderWorkTypeCheckboxes([customWorkTypes[0]]);
         }
 
-        function renderWorkTypeSelect() {
-            const select = document.getElementById('workType');
-            const currentValue = select.value;
-            select.innerHTML = '';
+        function renderWorkTypeCheckboxes(checkedValues) {
+            const container = document.getElementById('workTypeCheckboxes');
+            const customInput = document.getElementById('workTypeCustom');
+            if (!checkedValues) {
+                checkedValues = getCheckedWorkTypeValues();
+            }
+            container.innerHTML = '';
 
-            customWorkTypes.forEach(type => {
-                const opt = document.createElement('option');
-                opt.value = type;
-                opt.textContent = type;
-                select.appendChild(opt);
+            customWorkTypes.forEach((type, index) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `workType_${index}`;
+                checkbox.value = type;
+                checkbox.checked = checkedValues.includes(type);
+                checkbox.onchange = () => updatePreview();
+                checkbox.style.cssText = 'width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;';
+
+                const label = document.createElement('label');
+                label.htmlFor = `workType_${index}`;
+                label.textContent = type;
+                label.style.cssText = 'cursor: pointer; flex: 1;';
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn-secondary';
+                editBtn.title = '名前を変更';
+                editBtn.textContent = '✏️';
+                editBtn.onclick = () => renameWorkTypeItem(type);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-secondary';
+                deleteBtn.title = '削除';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.onclick = () => deleteWorkTypeItem(type);
+
+                row.appendChild(checkbox);
+                row.appendChild(label);
+                row.appendChild(editBtn);
+                row.appendChild(deleteBtn);
+                container.appendChild(row);
             });
 
-            const customOpt = document.createElement('option');
-            customOpt.value = 'custom';
-            customOpt.textContent = '自分で入力';
-            select.appendChild(customOpt);
+            // 自分で入力
+            const customRow = document.createElement('div');
+            customRow.style.cssText = 'display: flex; align-items: center; gap: 8px;';
 
-            // 選択状態を復元（存在しない場合は最初の要素を選択）
-            if (currentValue && (customWorkTypes.includes(currentValue) || currentValue === 'custom')) {
-                select.value = currentValue;
-            } else if (customWorkTypes.length > 0) {
-                select.value = customWorkTypes[0];
-            } else {
-                select.value = 'custom';
+            const customCheckbox = document.createElement('input');
+            customCheckbox.type = 'checkbox';
+            customCheckbox.id = 'workType_custom';
+            customCheckbox.value = 'custom';
+            customCheckbox.checked = checkedValues.includes('custom');
+            customCheckbox.style.cssText = 'width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;';
+            customCheckbox.onchange = () => {
+                customInput.style.display = customCheckbox.checked ? 'block' : 'none';
+                if (customCheckbox.checked) customInput.focus();
+                updatePreview();
+            };
+            if (customCheckbox.checked) {
+                customInput.style.display = 'block';
             }
 
-            onWorkTypeChange();
+            const customLabel = document.createElement('label');
+            customLabel.htmlFor = 'workType_custom';
+            customLabel.textContent = '自分で入力';
+            customLabel.style.cssText = 'cursor: pointer;';
+
+            customRow.appendChild(customCheckbox);
+            customRow.appendChild(customLabel);
+            container.appendChild(customRow);
+        }
+
+        function getCheckedWorkTypeValues() {
+            const container = document.getElementById('workTypeCheckboxes');
+            if (!container) return [];
+            return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        }
+
+        function getWorkTypeValue() {
+            const container = document.getElementById('workTypeCheckboxes');
+            const customInput = document.getElementById('workTypeCustom');
+            const checkedBoxes = container ? container.querySelectorAll('input[type="checkbox"]:checked') : [];
+            const values = [];
+            checkedBoxes.forEach(cb => {
+                if (cb.value === 'custom') {
+                    const customVal = customInput ? customInput.value.trim() : '';
+                    if (customVal) values.push(customVal);
+                } else {
+                    values.push(cb.value);
+                }
+            });
+            return values.join('・');
         }
 
         function addWorkType() {
@@ -1710,20 +1774,14 @@
                 }
                 customWorkTypes.push(name);
                 localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
-                renderWorkTypeSelect();
-                document.getElementById('workType').value = name;
-                onWorkTypeChange();
+                const checked = getCheckedWorkTypeValues();
+                checked.push(name);
+                renderWorkTypeCheckboxes(checked);
                 updatePreview();
             });
         }
 
-        function renameWorkType() {
-            const select = document.getElementById('workType');
-            const currentName = select.value;
-            if (currentName === 'custom') {
-                alert('「自分で入力」項目は変更できません。');
-                return;
-            }
+        function renameWorkTypeItem(currentName) {
             showCustomPrompt('作業種別の名前を変更:', currentName, function (newName) {
                 if (!newName || newName.trim() === '') return;
                 newName = newName.trim();
@@ -1732,84 +1790,29 @@
                     alert('すでに存在する名前です。');
                     return;
                 }
+                const wasChecked = getCheckedWorkTypeValues().includes(currentName);
                 const index = customWorkTypes.indexOf(currentName);
                 if (index !== -1) {
                     customWorkTypes[index] = newName;
                     localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
-                    renderWorkTypeSelect();
-                    document.getElementById('workType').value = newName;
-                    onWorkTypeChange();
+                    const checked = getCheckedWorkTypeValues().map(v => v === currentName ? newName : v);
+                    if (wasChecked && !checked.includes(newName)) checked.push(newName);
+                    renderWorkTypeCheckboxes(checked);
                     updatePreview();
                 }
             });
         }
 
-        function moveWorkTypeUp() {
-            const select = document.getElementById('workType');
-            const prevIndex = select.selectedIndex;
-            if (prevIndex <= 0) return;
-            const currentName = select.value;
-            if (currentName === 'custom') return;
-            const index = customWorkTypes.indexOf(currentName);
-            if (index > 0) {
-                [customWorkTypes[index - 1], customWorkTypes[index]] = [customWorkTypes[index], customWorkTypes[index - 1]];
-                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
-                // selectを直接再構築（onWorkTypeChangeを避ける）
-                const savedValue = currentName;
-                select.innerHTML = '';
-                customWorkTypes.forEach(type => {
-                    const opt = document.createElement('option');
-                    opt.value = type;
-                    opt.textContent = type;
-                    select.appendChild(opt);
-                });
-                const customOpt = document.createElement('option');
-                customOpt.value = 'custom';
-                customOpt.textContent = '自分で入力';
-                select.appendChild(customOpt);
-                select.value = savedValue;
-            }
-        }
-
-        function moveWorkTypeDown() {
-            const select = document.getElementById('workType');
-            const currentName = select.value;
-            if (currentName === 'custom') return;
-            const index = customWorkTypes.indexOf(currentName);
-            if (index >= 0 && index < customWorkTypes.length - 1) {
-                [customWorkTypes[index], customWorkTypes[index + 1]] = [customWorkTypes[index + 1], customWorkTypes[index]];
-                localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
-                const savedValue = currentName;
-                select.innerHTML = '';
-                customWorkTypes.forEach(type => {
-                    const opt = document.createElement('option');
-                    opt.value = type;
-                    opt.textContent = type;
-                    select.appendChild(opt);
-                });
-                const customOpt = document.createElement('option');
-                customOpt.value = 'custom';
-                customOpt.textContent = '自分で入力';
-                select.appendChild(customOpt);
-                select.value = savedValue;
-            }
-        }
-
-        function deleteWorkType() {
-            const select = document.getElementById('workType');
-            const currentName = select.value;
-            if (currentName === 'custom') {
-                alert('「自分で入力」項目は削除できません。');
-                return;
-            }
+        function deleteWorkTypeItem(name) {
             if (customWorkTypes.length <= 1) {
                 alert('最低1つの作業種別が必要です。');
                 return;
             }
-            if (confirm(`作業種別「${currentName}」を削除してもよろしいですか？`)) {
-                customWorkTypes = customWorkTypes.filter(t => t !== currentName);
+            if (confirm(`作業種別「${name}」を削除してもよろしいですか？`)) {
+                customWorkTypes = customWorkTypes.filter(t => t !== name);
                 localStorage.setItem('urlSubmitWorkTypesData', JSON.stringify(customWorkTypes));
-                renderWorkTypeSelect();
+                const checked = getCheckedWorkTypeValues().filter(v => v !== name);
+                renderWorkTypeCheckboxes(checked);
                 updatePreview();
             }
         }
@@ -2421,14 +2424,6 @@
         }
 
         function onWorkTypeChange() {
-            const select = document.getElementById('workType');
-            const customInput = document.getElementById('workTypeCustom');
-            if (select.value === 'custom') {
-                customInput.style.display = 'block';
-                customInput.focus();
-            } else {
-                customInput.style.display = 'none';
-            }
             updatePreview();
         }
 
@@ -2445,9 +2440,7 @@
             const titleCustom = document.getElementById('titleTypeCustom');
             const titleVal = titleSelect.value === 'custom' ? titleCustom.value.trim() : titleSelect.value;
 
-            const workTypeSelect = document.getElementById('workType');
-            const workTypeCustom = document.getElementById('workTypeCustom');
-            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+            const workType = getWorkTypeValue();
             const promanageUrl = document.getElementById('promanageUrl').value.trim();
             const mp4Url = document.getElementById('mp4Url').value.trim();
             const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
@@ -2584,14 +2577,19 @@
             // 作業種別
             const worktype = params.get('worktype');
             if (worktype) {
-                const select = document.getElementById('workType');
-                const matchOption = Array.from(select.options).find(o => o.value === worktype);
-                if (matchOption) {
-                    select.value = worktype;
+                const decoded = decodeURIComponent(worktype);
+                const container = document.getElementById('workTypeCheckboxes');
+                const matchCb = container ? Array.from(container.querySelectorAll('input[type="checkbox"]')).find(cb => cb.value === decoded) : null;
+                if (matchCb) {
+                    matchCb.checked = true;
                 } else {
-                    select.value = 'custom';
-                    document.getElementById('workTypeCustom').style.display = 'block';
-                    document.getElementById('workTypeCustom').value = decodeURIComponent(worktype);
+                    const customCb = document.getElementById('workType_custom');
+                    if (customCb) customCb.checked = true;
+                    const customInput = document.getElementById('workTypeCustom');
+                    if (customInput) {
+                        customInput.style.display = 'block';
+                        customInput.value = decoded;
+                    }
                 }
             }
 
@@ -2718,9 +2716,7 @@
             const promanageUrl = document.getElementById('promanageUrl').value.trim();
 
             // 作業種別
-            const workTypeSelect = document.getElementById('workType');
-            const workTypeCustom = document.getElementById('workTypeCustom');
-            const workType = workTypeSelect.value === 'custom' ? workTypeCustom.value.trim() : workTypeSelect.value;
+            const workType = getWorkTypeValue();
 
             // ボタンを送信中状態に
             const btn = document.getElementById('submitSheetBtn');
