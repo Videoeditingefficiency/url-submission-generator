@@ -1667,7 +1667,11 @@
                 checkbox.id = `workType_${index}`;
                 checkbox.value = type;
                 checkbox.checked = checkedValues.includes(type);
-                checkbox.onchange = () => updatePreview();
+                checkbox.onchange = () => {
+                    document.querySelectorAll('#workTypeCheckboxes input[type="checkbox"]').forEach(cb => { if (cb !== checkbox) cb.checked = false; });
+                    document.getElementById('workTypeCustom').style.display = 'none';
+                    updatePreview();
+                };
                 checkbox.style.cssText = 'width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;';
 
                 const label = document.createElement('label');
