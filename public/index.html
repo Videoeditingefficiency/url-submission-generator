@@ -1477,8 +1477,8 @@
             // 旧バージョンで保存された {MP4URL} ブロックを一度だけ除去
             if (!localStorage.getItem('urlSubmitMP4Removed_v1')) {
                 const stripMp4 = (txt) => (txt || '')
-                    .replace(/^[ \t]*▼[^\n]*\n[ \t]*\{MP4URL\}[ \t]*\n?/gm, '')
-                    .replace(/^[ \t]*\{MP4URL\}[ \t]*\n?/gm, '')
+                    .replace(/^[ \t　]*▼[^\n]*\n[ \t　]*\{MP4URL\}[ \t　]*\n?/gm, '')
+                    .replace(/^[ \t　]*\{MP4URL\}[ \t　]*\n?/gm, '')
                     .replace(/\n{3,}/g, '\n\n');
                 let changed = false;
                 for (const id of Object.keys(customTemplates)) {
@@ -1504,6 +1504,8 @@
                 // localStorageの内容もトップのものに上書き
                 localStorage.setItem('urlSubmitTemplateType', select.value);
             }
+
+            loadCurrentTemplate();
         }
 
         function resetTemplatesToDefault() {
@@ -1517,8 +1519,6 @@
                 showToastMessage('🔄 テンプレートを初期状態にリセットしました', 'success');
             }
         }
-
-        loadCurrentTemplate();
 
         const savedSpaceToggle = localStorage.getItem('urlSubmitSpaceToggle');
         if (savedSpaceToggle !== null) {
@@ -2395,7 +2395,7 @@
                 .replace(/\{作業種別\}/g, workType);
 
             // If the URL exists, replace the tag.
-            // If not, remove the tag AND the single line immediately preceding it (assuming it's a header like ▼MP4).
+            // If not, remove the tag AND the single line immediately preceding it (assuming it's a header like ▼プロマネ or ▼スプレッドシート).
             const replaceOrRemove = (msg, tagRaw, val) => {
                 const tag = '\{' + tagRaw + '\}';
                 if (val) {
@@ -2548,7 +2548,6 @@
 
         // Initialize template
         initTemplate();
-        loadCurrentTemplate();
 
         // URLパラメータを読み取り
         const urlParamData = loadFromUrlParams();

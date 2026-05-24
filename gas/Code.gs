@@ -64,7 +64,7 @@ function doGet(e) {
  * {
  *   "projectName": "プロジェクト名（タイトルで検索）",
  *   "youtubeUrls": ["url1", "url2", ...],
- *   "mp4Url": "MP4のURL",
+ *   "mp4Url": "MP4のURL（v2 以降クライアントは送信しない。MP4_URL 列は常に空のまま）",
  *   "promanageUrl": "プロマネのURL",
  *   "workType": "修正" | "制作" | "初稿" | ...
  * }
@@ -174,7 +174,7 @@ function updateSpreadsheet(data) {
     }
   }
 
-  // MP4 URL を書き込み
+  // MP4 URL を書き込み（v2 以降クライアントは送信しないため通常スキップ。旧クライアント互換のため受信のみ残置）
   if (mp4Url) {
     sheet.getRange(actualRow, COL.MP4_URL + 1).setValue(mp4Url);
   }
