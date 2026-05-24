@@ -1042,15 +1042,6 @@
             </div>
             <div class="collapsible-content" id="otherUrls">
                 <div class="form-group">
-                    <label for="mp4Url">MP4 URL</label>
-                    <div class="url-with-button">
-                        <input type="url" id="mp4Url" placeholder="https://..."
-                            oninput="updatePreview(); updateOtherViewButton('mp4Url')">
-                        <button type="button" class="btn-view-video disabled" id="btn-view-mp4Url"
-                            onclick="openOtherUrl('mp4Url')" title="URLを確認">▶</button>
-                    </div>
-                </div>
-                <div class="form-group">
                     <label for="promanageUrl">プロマネ URL</label>
                     <div class="url-with-button">
                         <input type="url" id="promanageUrl" placeholder="https://..."
@@ -1146,7 +1137,6 @@
                 <code>{作業種別}</code> 制作または修正<br>
                 <code>{YouTube一覧}</code> YouTube限定公開のURL一覧<br>
                 <code>{プロマネURL}</code> プロマネURL<br>
-                <code>{MP4URL}</code> MP4 URL<br>
                 <code>{スプレッドシートURL}</code> スプレッドシートURL
             </div>
         </div>
@@ -1425,9 +1415,6 @@
 ▼YouTube限定公開
 {YouTube一覧}
 
-▼MP4
-{MP4URL}
-
 ▼プロマネ
 {プロマネURL}
 
@@ -1440,9 +1427,6 @@
 
 ▼YouTube限定公開
 {YouTube一覧}
-
-▼MP4
-{MP4URL}
 
 ▼プロマネ
 {プロマネURL}
@@ -1457,9 +1441,6 @@
 
 ▼YouTube限定公開
 {YouTube一覧}
-
-▼MP4
-{MP4URL}
 
 ▼プロマネ
 {プロマネURL}
@@ -1491,6 +1472,27 @@
                 } catch (e) {
                     customTemplates = { 'template1': { name: '標準ベース', content: TEMPLATES.template1 } };
                 }
+            }
+
+            // 旧バージョンで保存された {MP4URL} ブロックを一度だけ除去
+            if (!localStorage.getItem('urlSubmitMP4Removed_v1')) {
+                const stripMp4 = (txt) => (txt || '')
+                    .replace(/^[ \t]*▼[^\n]*\n[ \t]*\{MP4URL\}[ \t]*\n?/gm, '')
+                    .replace(/^[ \t]*\{MP4URL\}[ \t]*\n?/gm, '')
+                    .replace(/\n{3,}/g, '\n\n');
+                let changed = false;
+                for (const id of Object.keys(customTemplates)) {
+                    const before = customTemplates[id].content;
+                    const after = stripMp4(before);
+                    if (before !== after) {
+                        customTemplates[id].content = after;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    localStorage.setItem('urlSubmitTemplatesData', JSON.stringify(customTemplates));
+                }
+                localStorage.setItem('urlSubmitMP4Removed_v1', '1');
             }
 
             renderTemplateSelect();
@@ -2000,7 +2002,6 @@
                 // --- 2. URLの抽出とスマート置換 ---
                 let lines = text.split('\n');
                 let ytUrls = [];
-                let mp4Url = '';
                 let promanageUrl = '';
                 let sheetUrl = '';
                 let usedTags = new Set();
@@ -2013,8 +2014,6 @@
                     let tagToInsert = null;
                     if (h.includes('youtube') || h.includes('youtu.be')) {
                         tagToInsert = '{YouTube一覧}';
-                    } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || h.includes('ドライブ') || h.includes('drive')) {
-                        tagToInsert = '{MP4URL}';
                     } else if (h.includes('プロマネ') || h.includes('マネ')) {
                         tagToInsert = '{プロマネURL}';
                     } else if (h.includes('スプレッドシート') || h.includes('シート') || h.includes('管理表') || h.includes('spreadsheets')) {
@@ -2030,7 +2029,6 @@
                                 const url = nextLine.split(/[ 　]/)[0];
                                 if (!nextLine.includes('{')) {
                                     if (tagToInsert === '{YouTube一覧}') ytUrls.push({ url: url, header: line });
-                                    else if (tagToInsert === '{MP4URL}') mp4Url = url;
                                     else if (tagToInsert === '{プロマネURL}') promanageUrl = url;
                                     else if (tagToInsert === '{スプレッドシートURL}') sheetUrl = url;
                                 }
@@ -2067,10 +2065,6 @@
                             } else {
                                 lines[i] = '__DELETE_ME__';
                             }
-                        } else if (hFall.includes('納品') || hFall.includes('mp4') || hFall.includes('ギガファイル') || hFall.includes('ドライブ') || hFall.includes('drive') || u.endsWith('.mp4')) {
-                            if (!line.includes('{')) mp4Url = url;
-                            lines[i] = line.replace(/^https?[^\s　]*/i, '{MP4URL}');
-                            usedTags.add('{MP4URL}');
                         } else if (hFall.includes('プロマネ') || hFall.includes('マネ') || u.includes('promanage')) {
                             if (!line.includes('{')) promanageUrl = url;
                             lines[i] = line.replace(/^https?[^\s　]*/i, '{プロマネURL}');
@@ -2134,10 +2128,6 @@
                             ytUrls.forEach(yt => addYoutubeEntry(yt.url, '', ''));
                         }
                     }
-                    if (mp4Url) {
-                        document.getElementById('mp4Url').value = mp4Url;
-                        updateOtherViewButton('mp4Url');
-                    }
                     if (promanageUrl) {
                         document.getElementById('promanageUrl').value = promanageUrl;
                         updateOtherViewButton('promanageUrl');
@@ -2149,7 +2139,7 @@
                 }
 
                 // 必須変数が含まれているかチェック
-                const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+                const requiredVars = ['{YouTube一覧}', '{プロマネURL}', '{スプレッドシートURL}'];
                 let missingVars = [];
                 for (const v of requiredVars) {
                     if (!templateText.includes(v)) {
@@ -2271,9 +2261,6 @@
                         } else {
                             lines[i] = '__DELETE_ME__'; // 重複するYouTubeURL行は消す
                         }
-                    } else if (h.includes('納品') || h.includes('mp4') || h.includes('ギガファイル') || h.includes('gigafile') || h.includes('ドライブ') || h.includes('drive') || u.endsWith('.mp4')) {
-                        lines[i] = line.replace(/^https?[^\s　]*/i, '{MP4URL}');
-                        usedTags.add('{MP4URL}');
                     } else if (h.includes('プロマネ') || h.includes('マネ') || u.includes('promanage')) {
                         lines[i] = line.replace(/^https?[^\s　]*/i, '{プロマネURL}');
                         usedTags.add('{プロマネURL}');
@@ -2295,7 +2282,7 @@
             let newText = currentText.substring(0, selectionStart) + smartPaste + currentText.substring(selectionEnd);
 
             // 必須変数が含まれているかチェック
-            const requiredVars = ['{YouTube一覧}', '{MP4URL}', '{プロマネURL}', '{スプレッドシートURL}'];
+            const requiredVars = ['{YouTube一覧}', '{プロマネURL}', '{スプレッドシートURL}'];
             let missingVars = [];
             for (const v of requiredVars) {
                 if (!newText.includes(v)) {
@@ -2342,11 +2329,9 @@
 
             // その他のURLをクリア
             document.getElementById('promanageUrl').value = '';
-            document.getElementById('mp4Url').value = '';
             document.getElementById('spreadsheetUrl').value = '';
 
             // その他URL確認ボタンを無効化
-            updateOtherViewButton('mp4Url');
             updateOtherViewButton('promanageUrl');
             updateOtherViewButton('spreadsheetUrl');
 
@@ -2373,7 +2358,6 @@
 
             const workType = getWorkTypeValue();
             const promanageUrl = document.getElementById('promanageUrl').value.trim();
-            const mp4Url = document.getElementById('mp4Url').value.trim();
             const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
             const youtubeUrls = getYoutubeEntries();
 
@@ -2402,7 +2386,7 @@
 
             // If "URLの間に空白行を空ける" is unchecked, remove the empty lines between URL blocks in the template
             if (!addSpace) {
-                template = template.replace(/(\{(YouTube一覧|MP4URL|プロマネURL|スプレッドシートURL)\})\n+\s*(▼|■|【)/g, '$1\n$3');
+                template = template.replace(/(\{(YouTube一覧|プロマネURL|スプレッドシートURL)\})\n+\s*(▼|■|【)/g, '$1\n$3');
             }
 
             let message = template
@@ -2422,7 +2406,6 @@
             };
 
             message = replaceOrRemove(message, 'YouTube一覧', ytSection);
-            message = replaceOrRemove(message, 'MP4URL', mp4Url);
             message = replaceOrRemove(message, 'プロマネURL', promanageUrl);
             message = replaceOrRemove(message, 'スプレッドシートURL', spreadsheetUrl);
 
@@ -2546,13 +2529,6 @@
                 }
             }
 
-            // MP4 URL
-            const mp4 = params.get('mp4');
-            if (mp4) {
-                document.getElementById('mp4Url').value = decodeURIComponent(mp4);
-                updateOtherViewButton('mp4Url');
-            }
-
             // プロマネ URL
             const promanage = params.get('promanage');
             if (promanage) {
@@ -2572,6 +2548,7 @@
 
         // Initialize template
         initTemplate();
+        loadCurrentTemplate();
 
         // URLパラメータを読み取り
         const urlParamData = loadFromUrlParams();
@@ -2643,7 +2620,6 @@
             const youtubeUrls = youtubeEntries.map(e => e.url).filter(u => u);
 
             // その他URL
-            const mp4Url = document.getElementById('mp4Url').value.trim();
             const promanageUrl = document.getElementById('promanageUrl').value.trim();
 
             // 作業種別
@@ -2659,7 +2635,6 @@
                 const payload = {
                     projectName,
                     youtubeUrls,
-                    mp4Url,
                     promanageUrl,
                     workType
                 };
