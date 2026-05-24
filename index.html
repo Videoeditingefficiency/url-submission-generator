@@ -1844,10 +1844,7 @@
             const currentType = select ? select.value : Object.keys(customTemplates)[0];
 
             if (customTemplates[currentType]) {
-                console.log('loadCurrentTemplate:', currentType, 'content length:', customTemplates[currentType].content ? customTemplates[currentType].content.length : 'EMPTY');
                 editor.value = customTemplates[currentType].content || '';
-            } else {
-                console.log('loadCurrentTemplate: template not found for', currentType, 'available:', Object.keys(customTemplates));
             }
             updatePreview();
         }
@@ -1858,11 +1855,9 @@
 
             const currentType = select.value;
 
-            // 現在のテキスト内容を保存
+            // 現在のテキスト内容を保存（空エディタで非空コンテンツを上書きしない安全弁付き）
             if (customTemplates[currentType]) {
-                console.log('saveTemplate:', currentType, 'editor length:', editor.value ? editor.value.length : 'EMPTY');
                 if (!editor.value && customTemplates[currentType].content) {
-                    console.log('WARNING: saveTemplate would overwrite non-empty content with empty! Skipping.');
                     return;
                 }
                 customTemplates[currentType].content = editor.value;
