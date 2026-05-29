@@ -46,7 +46,10 @@
 
         body {
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            background: var(--bg-primary);
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
+                url('bg-vs.jpg') top left / 320px auto repeat fixed,
+                var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.6;
@@ -148,7 +151,7 @@
         .container {
             max-width: 960px;
             margin: 0 auto;
-            padding: 48px 20px 40px;
+            padding: 0 20px 40px;
             position: relative;
             z-index: 1;
         }
@@ -156,7 +159,7 @@
         /* Header */
         .header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 0;
         }
 
         .header h1 {
@@ -173,6 +176,14 @@
         .header p {
             color: var(--text-secondary);
             font-size: 0.95rem;
+        }
+
+        .header-banner {
+            max-width: 100%;
+            width: min(280px, 100%);
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
         /* Card */
@@ -980,8 +991,7 @@
     <div class="bg-decor-br"></div>
     <div class="container">
         <header class="header">
-            <h1>📋 URL提出メッセージ生成</h1>
-            <p>URLと情報を入力して、提出メッセージを自動生成します</p>
+            <img src="url_submission_banner.png" alt="URL提出メッセージ生成 - URLと情報を入力して、提出メッセージを自動生成します" class="header-banner">
         </header>
 
 
