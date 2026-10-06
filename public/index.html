@@ -2507,18 +2507,21 @@
         // URLパラメータから自動入力
         function loadFromUrlParams() {
             const params = new URLSearchParams(window.location.search);
+            // Why: params.get() は既にデコード済み。再デコードは「1.25%利上げ」のような % 入りファイル名で URIError を投げ、
+            // 以降の初期化（動画欄の生成）ごと止まる。旧来の二重エンコードURLのためにデコードは試しつつ、失敗時は元の値を使う。
+            const safeDecode = (v) => { try { return decodeURIComponent(v); } catch (_) { return v; } };
             if (params.toString() === '') return;
 
             // プロジェクト名
             const project = params.get('project');
             if (project) {
-                document.getElementById('projectName').value = decodeURIComponent(project);
+                document.getElementById('projectName').value = safeDecode(project);
             }
 
             // 作業種別
             const worktype = params.get('worktype');
             if (worktype) {
-                const decoded = decodeURIComponent(worktype);
+                const decoded = safeDecode(worktype);
                 const container = document.getElementById('workTypeCheckboxes');
                 const matchCb = container ? Array.from(container.querySelectorAll('input[type="checkbox"]')).find(cb => cb.value === decoded) : null;
                 if (matchCb) {
@@ -2540,40 +2543,40 @@
             const youtubeTitles = [];
             // まず youtube パラメータ
             if (params.get('youtube')) {
-                youtubeUrls.push(decodeURIComponent(params.get('youtube')));
-                youtubeNotes.push(params.get('youtube_note') ? decodeURIComponent(params.get('youtube_note')) : '');
-                youtubeTitles.push(params.get('youtube_title') ? decodeURIComponent(params.get('youtube_title')) : '');
+                youtubeUrls.push(safeDecode(params.get('youtube')));
+                youtubeNotes.push(params.get('youtube_note') ? safeDecode(params.get('youtube_note')) : '');
+                youtubeTitles.push(params.get('youtube_title') ? safeDecode(params.get('youtube_title')) : '');
             }
             // youtube2, youtube3, ... を順番にチェック
             for (let i = 2; i <= 20; i++) {
                 const url = params.get(`youtube${i}`);
                 if (url) {
-                    youtubeUrls.push(decodeURIComponent(url));
+                    youtubeUrls.push(safeDecode(url));
                     const note = params.get(`youtube${i}_note`);
-                    youtubeNotes.push(note ? decodeURIComponent(note) : '');
+                    youtubeNotes.push(note ? safeDecode(note) : '');
                     const title = params.get(`youtube${i}_title`);
-                    youtubeTitles.push(title ? decodeURIComponent(title) : '');
+                    youtubeTitles.push(title ? safeDecode(title) : '');
                 }
             }
 
             // MP4 URL
             const mp4 = params.get('mp4');
             if (mp4) {
-                document.getElementById('mp4Url').value = decodeURIComponent(mp4);
+                document.getElementById('mp4Url').value = safeDecode(mp4);
                 updateOtherViewButton('mp4Url');
             }
 
             // プロマネ URL
             const promanage = params.get('promanage');
             if (promanage) {
-                document.getElementById('promanageUrl').value = decodeURIComponent(promanage);
+                document.getElementById('promanageUrl').value = safeDecode(promanage);
                 updateOtherViewButton('promanageUrl');
             }
 
             // スプレッドシート URL
             const spreadsheet = params.get('spreadsheet');
             if (spreadsheet) {
-                document.getElementById('spreadsheetUrl').value = decodeURIComponent(spreadsheet);
+                document.getElementById('spreadsheetUrl').value = safeDecode(spreadsheet);
                 updateOtherViewButton('spreadsheetUrl');
             }
 
